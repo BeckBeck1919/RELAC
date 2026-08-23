@@ -415,12 +415,37 @@ canvas {
 header,.topbar,.header,.top-header,#header{
  position:relative !important;
 }
+
+</style>
+
+<style id="relac-fullscreen-flex-header">
 #relac-fullscreen-btn{
- position:absolute !important;
- right:110px !important;
- top:12px !important;
+    position:relative !important;
+    right:auto !important;
+    top:auto !important;
+    margin-left:12px !important;
+    margin-right:12px !important;
+    flex:0 0 auto !important;
+    height:42px !important;
+    background:#172533 !important;
+    color:#ffffff !important;
+    border:1px solid #607080 !important;
+    border-radius:6px !important;
+    padding:10px 16px !important;
+    z-index:10 !important;
+}
+
+/* Masuk ke bar kontrol header, bukan menimpa elemen lain */
+.header-controls,
+.top-controls,
+.control-bar,
+.controls,
+header .controls {
+    display:flex !important;
+    align-items:center !important;
 }
 </style>
+
 </head>
 <body><div id="app">
   <div id="viewport"></div>
@@ -2492,18 +2517,7 @@ animate();
 
 
 <style>
-#relac-fullscreen-btn{
-position:absolute;
-right:20px;
-top:14px;
-z-index:9999;
-background:#172533;
-color:white;
-border:1px solid #607080;
-padding:10px 16px;
-border-radius:6px;
-height:42px;
-}
+
 #relac-tour-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;align-items:center;justify-content:center}
 #relac-tour-card{background:#142231;color:white;width:420px;max-width:90%;padding:25px;border-radius:12px;border:1px solid #4b7185}
 </style>

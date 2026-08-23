@@ -346,6 +346,31 @@ header, .topbar, .top-header, #header {
 }
 </style>
 
+
+<style id="relac-top-layer-style">
+#relac-top-brand {
+    position: fixed !important;
+    left: 18px !important;
+    top: 10px !important;
+    width: 72px !important;
+    height: 60px !important;
+    object-fit: contain !important;
+    z-index: 2147483647 !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: none !important;
+}
+
+canvas {
+    z-index: 1;
+}
+
+#relac-top-brand {
+    transform: translateZ(9999px);
+}
+</style>
+
 </head>
 <body><div id="app">
   <div id="viewport"></div>

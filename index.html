@@ -268,6 +268,20 @@
  object-fit:contain;
 }
 </style>
+
+<style>
+#relac-header-logo {
+    position: absolute !important;
+    left: 24px !important;
+    top: 12px !important;
+    width: 260px !important;
+    height: auto !important;
+    z-index: 50 !important;
+    object-fit: contain !important;
+    pointer-events: none;
+}
+</style>
+
 </head>
 <body><div id="app">
   <div id="viewport"></div>
@@ -282,8 +296,8 @@
 
   <div id="topbar">
     <div id="brand">
-      <div class="mark"><img src="RELAC.png" alt="RELAC" style="width:150px;height:auto;display:block;object-fit:contain;"></div>
-      <div class="txt"><span>DIGITAL TWIN · TWR-01</span></div>
+      <div class="mark"><img id="relac-header-logo" src="RELAC.png" alt="RELAC" style="width:150px;height:auto;display:block;object-fit:contain;"></div>
+      <div class="txt"><span></span></div>
     </div>
     <div id="modeIndicator"><span class="dot" id="modeDot"></span><span class="label" id="modeLabel">NORMAL / PRE-DISASTER</span></div>
     <div id="controls">

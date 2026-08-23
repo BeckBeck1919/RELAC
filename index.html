@@ -410,6 +410,17 @@ canvas {
 }
 </style>
 
+
+<style id="relac-fullscreen-header-fix">
+header,.topbar,.header,.top-header,#header{
+ position:relative !important;
+}
+#relac-fullscreen-btn{
+ position:absolute !important;
+ right:110px !important;
+ top:12px !important;
+}
+</style>
 </head>
 <body><div id="app">
   <div id="viewport"></div>
@@ -2481,7 +2492,18 @@ animate();
 
 
 <style>
-#relac-fullscreen-btn{position:fixed;right:160px;top:14px;z-index:99999;background:#172533;color:white;border:1px solid #607080;padding:10px 14px;border-radius:6px}
+#relac-fullscreen-btn{
+position:absolute;
+right:20px;
+top:14px;
+z-index:9999;
+background:#172533;
+color:white;
+border:1px solid #607080;
+padding:10px 16px;
+border-radius:6px;
+height:42px;
+}
 #relac-tour-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;align-items:center;justify-content:center}
 #relac-tour-card{background:#142231;color:white;width:420px;max-width:90%;padding:25px;border-radius:12px;border:1px solid #4b7185}
 </style>

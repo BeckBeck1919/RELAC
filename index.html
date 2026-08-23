@@ -257,28 +257,19 @@
     #scaleNote{ display:none; }
   }
 
- .mark img{max-width:150px;max-height:58px;}
-.relay-logo{
- position:absolute;
- left:18px;
- top:10px;
- width:150px;
- height:auto;
- z-index:20;
- object-fit:contain;
-}
+ 
 </style>
 
+
+
+
 <style>
-#relac-header-logo {
-    position: absolute !important;
-    left: 24px !important;
-    top: 12px !important;
-    width: 260px !important;
-    height: auto !important;
-    z-index: 50 !important;
-    object-fit: contain !important;
-    pointer-events: none;
+.display-note,
+.controls-note,
+.instruction-text,
+.guide-text,
+.hint-text {
+    color: #ffffff !important;
 }
 </style>
 
@@ -296,7 +287,7 @@
 
   <div id="topbar">
     <div id="brand">
-      <div class="mark"><img id="relac-header-logo" src="RELAC.png" alt="RELAC" style="width:150px;height:auto;display:block;object-fit:contain;"></div>
+      <div class="mark"></div>
       <div class="txt"><span></span></div>
     </div>
     <div id="modeIndicator"><span class="dot" id="modeDot"></span><span class="label" id="modeLabel">NORMAL / PRE-DISASTER</span></div>
@@ -597,10 +588,10 @@ scene.add(fill);
 function SimpleOrbitControls(camera, domElement){
   this.camera = camera;
   this.domElement = domElement;
-  this.target = new THREE.Vector3(0, 12, 0);
-  this.radius = 128;
-  this.theta = Math.PI*0.28;
-  this.phi = Math.PI*0.34;
+  this.target = new THREE.Vector3(42, 14, -38);
+  this.radius = 92;
+  this.theta = Math.PI*0.78;
+  this.phi = Math.PI*0.30;
   this.minRadius = 14; this.maxRadius = 360;
   this.minPhi = 0.16; this.maxPhi = Math.PI/2 - 0.02;
   this.rotateSpeed = 0.0062;

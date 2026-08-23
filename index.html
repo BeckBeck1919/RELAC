@@ -2479,6 +2479,35 @@ animate();
 </script>
 
 
+
+<style>
+#relac-fullscreen-btn{position:fixed;right:160px;top:14px;z-index:99999;background:#172533;color:white;border:1px solid #607080;padding:10px 14px;border-radius:6px}
+#relac-tour-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:100000;align-items:center;justify-content:center}
+#relac-tour-card{background:#142231;color:white;width:420px;max-width:90%;padding:25px;border-radius:12px;border:1px solid #4b7185}
+</style>
+<button id="relac-fullscreen-btn">⛶ FULLSCREEN</button>
+<div id="relac-tour-overlay"><div id="relac-tour-card"><h2>RELAC Guide Tour</h2><p id="relac-tour-text"></p><button id="tour-next">NEXT</button> <button id="tour-close">CLOSE</button></div></div>
+<script>
+(function(){
+const steps=[
+"Welcome to RELAC Digital Twin.",
+"Activate RELAC to restore communication and prepare emergency logistics.",
+"Inspect affected communities from the area panel.",
+"Send emergency assistance to deliver support through the network.",
+"Use mouse controls to explore the 3D environment."
+];
+let n=0;
+const o=document.getElementById('relac-tour-overlay');
+const t=document.getElementById('relac-tour-text');
+document.getElementById('tour-next').onclick=()=>{n++; if(n>=steps.length)o.style.display='none'; else t.textContent=steps[n];};
+document.getElementById('tour-close').onclick=()=>o.style.display='none';
+window.addEventListener('load',()=>{t.textContent=steps[0];o.style.display='flex';});
+document.getElementById('relac-fullscreen-btn').onclick=()=>{
+ if(!document.fullscreenElement) document.documentElement.requestFullscreen();
+ else document.exitFullscreen();
+};
+})();
+</script>
 </body>
 </html>
 

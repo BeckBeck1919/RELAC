@@ -275,9 +275,10 @@
 
 
 <style>
-#mini-map, .mini-map, .minimap, .map-panel {
-    opacity: 1 !important;
-    visibility: visible !important;
+#minimapWrap:not(.collapsed) #minimap {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
 }
 </style>
 
@@ -285,7 +286,7 @@
 <body><div id="app">
   <div id="viewport"></div>
 
-  <div id="minimapWrap" class="collapsed">
+  <div id="minimapWrap">
     <div class="t"><span>MINI MAP</span><span class="mmActions"><span id="mmScale">R = 3.0 km</span><span id="mmToggle" title="Minimize/expand mini map">▾</span></span></div>
     <canvas id="minimap" width="180" height="180"></canvas>
   </div>

@@ -257,8 +257,7 @@
     #scaleNote{ display:none; }
   }
 
-#brandLogo{position:fixed;top:10px;left:12px;width:170px;height:70px;z-index:9999;display:flex;align-items:center;pointer-events:none;}
-#brandLogo img{width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 4px 8px #0008);}
+ .mark img{max-width:150px;max-height:58px;}
 .relay-logo{
  position:absolute;
  left:18px;
@@ -270,8 +269,7 @@
 }
 </style>
 </head>
-<body><div id="brandLogo"><img src="relay-logo.png" alt="RELAY logo"></div>
-<div id="app">
+<body><div id="app">
   <div id="viewport"></div>
 
   <div id="minimapWrap" class="collapsed">
@@ -284,10 +282,8 @@
 
   <div id="topbar">
     <div id="brand">
-      <div class="mark">
-        <svg viewBox="0 0 40 40"><polygon points="20,3 34,34 6,34" fill="none" stroke="#4fb3a9" stroke-width="2.4"/><line x1="20" y1="3" x2="20" y2="18" stroke="#4fb3a9" stroke-width="2.4"/><circle cx="20" cy="20" r="3.4" fill="#4fb3a9"/></svg>
-      </div>
-      <div class="txt"><b>RELAY</b><span>DIGITAL TWIN · TWR-01</span></div>
+      <div class="mark"><img src="relay-logo.png" alt="RELAY" style="width:150px;height:auto;display:block;object-fit:contain;"></div>
+      <div class="txt"><span>DIGITAL TWIN · TWR-01</span></div>
     </div>
     <div id="modeIndicator"><span class="dot" id="modeDot"></span><span class="label" id="modeLabel">NORMAL / PRE-DISASTER</span></div>
     <div id="controls">
@@ -1924,6 +1920,8 @@ function playSiren(){
     sirenAudio.preload='auto';
   }
   sirenAudio.currentTime=0;
+  sirenAudio.loop=true;
+  sirenAudio.muted=!soundEnabled;
   sirenAudio.play().catch(()=>{});
 }
 function stopSiren(){
@@ -2314,6 +2312,14 @@ const btnSoundEl = document.getElementById('btnSound');
 btnSoundEl.addEventListener('click', function(){
   soundEnabled = !soundEnabled;
   btnSoundEl.textContent = soundEnabled ? '🔊 SOUND' : '🔇 MUTED';
+  if(sirenAudio){
+    sirenAudio.muted = !soundEnabled;
+    if(!soundEnabled){
+      sirenAudio.pause();
+    } else if(state.mode==='disaster' || state.mode==='relay'){
+      sirenAudio.play().catch(()=>{});
+    }
+  }
   if(soundEnabled){ ensureAudio(); playTick(); }
 });
 

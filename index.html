@@ -1,0 +1,2330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RELAY — Resilient Emergency Logistics Access System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b1119;
+    --bg-2:#080c12;
+    --panel: rgba(18,26,36,0.86);
+    --panel-solid:#121a24;
+    --line: rgba(120,150,180,0.16);
+    --line-strong: rgba(120,150,180,0.30);
+    --text:#e7ecf1;
+    --text-dim:#8a9cb0;
+    --text-faint:#54677c;
+    --accent:#4fb3a9;
+    --accent-2:#7fd6cc;
+    --accent-soft: rgba(79,179,169,0.14);
+    --warn:#e0a458;
+    --warn-soft: rgba(224,164,88,0.14);
+    --danger:#c0453d;
+    --danger-soft: rgba(192,69,61,0.16);
+    --ok:#5fbf77;
+    --ok-soft: rgba(95,191,119,0.14);
+    --font-display:'Space Grotesk','Segoe UI Semibold',system-ui,sans-serif;
+    --font-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+    --radius: 3px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; width:100%; height:100%; background:var(--bg); overflow:hidden; }
+  body{ font-family:var(--font-body); color:var(--text); }
+  #app{ position:relative; width:100vw; height:100vh; }
+  #viewport{ position:absolute; inset:0; }
+  #viewport canvas{ display:block; width:100%; height:100%; }
+
+  ::-webkit-scrollbar{ width:6px; height:6px; }
+  ::-webkit-scrollbar-thumb{ background:var(--line-strong); border-radius:4px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+
+  a, button{ font-family:inherit; }
+
+  /* ---------- Top bar ---------- */
+  #topbar{
+    position:absolute; top:0; left:0; right:0; height:58px;
+    background:linear-gradient(180deg, rgba(8,12,18,0.92), rgba(8,12,18,0.72));
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:18px; padding:0 16px;
+    z-index:40; backdrop-filter: blur(6px);
+  }
+  #brand{ display:flex; align-items:center; gap:10px; padding-right:14px; border-right:1px solid var(--line); height:60%; }
+  #brand .mark{ width:26px; height:26px; position:relative; flex:none; }
+  #brand .mark svg{ width:100%; height:100%; }
+  #brand .txt{ display:flex; flex-direction:column; line-height:1.05; }
+  #brand .txt b{ font-family:var(--font-display); font-size:15px; font-weight:700; letter-spacing:0.06em; }
+  #brand .txt span{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); letter-spacing:0.03em; }
+
+  #modeIndicator{ display:flex; align-items:center; gap:8px; padding:5px 10px; border:1px solid var(--line-strong); border-radius:var(--radius); background:rgba(255,255,255,0.02); }
+  #modeIndicator .dot{ width:7px; height:7px; border-radius:50%; background:var(--text-faint); box-shadow:0 0 6px currentColor; }
+  #modeIndicator .label{ font-family:var(--font-mono); font-size:11px; letter-spacing:0.05em; color:var(--text-dim); }
+
+  #controls{ display:flex; align-items:center; gap:8px; flex:1; overflow-x:auto; }
+  .btn{
+    font-family:var(--font-mono); font-size:10.5px; letter-spacing:0.04em; font-weight:500;
+    color:var(--text-dim); background:rgba(255,255,255,0.03); border:1px solid var(--line-strong);
+    padding:9px 12px; border-radius:var(--radius); cursor:pointer; white-space:nowrap;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--accent); color:var(--accent-2); background:var(--accent-soft); }
+  .btn:disabled{ opacity:0.32; cursor:not-allowed; }
+  .btn.primary{ border-color:var(--accent); color:var(--accent-2); background:var(--accent-soft); }
+  .btn.primary:hover:not(:disabled){ background:rgba(79,179,169,0.26); }
+  .btn.danger{ border-color:var(--danger); color:#ffb0aa; background:var(--danger-soft); }
+  .btn.danger:hover:not(:disabled){ background:rgba(192,69,61,0.30); }
+  .btn.ghost{ border-color:var(--line); }
+
+  #clock{ font-family:var(--font-mono); font-size:10.5px; color:var(--text-faint); text-align:right; white-space:nowrap; padding-left:10px; border-left:1px solid var(--line); }
+  #clock b{ color:var(--text-dim); display:block; font-size:11px; }
+
+  /* ---------- Right dashboard ---------- */
+  #dashboard{
+    position:absolute; top:58px; right:0; bottom:0; width:328px;
+    background:var(--panel); border-left:1px solid var(--line);
+    overflow-y:auto; z-index:30; backdrop-filter: blur(6px);
+    padding-bottom:16px; transition: transform .25s ease;
+  }
+  #app.dashCollapsed #dashboard{ transform: translateX(100%); pointer-events:none; }
+  #dashToggle{
+    position:absolute; top:70px; right:328px; z-index:45; width:22px; height:46px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:var(--panel); border:1px solid var(--line-strong); border-right:none;
+    border-radius:4px 0 0 4px; color:var(--text-dim); font-size:12px; user-select:none;
+    transition: right .25s ease; backdrop-filter: blur(6px);
+  }
+  #dashToggle:hover{ color:var(--accent-2); border-color:var(--accent); }
+  #app.dashCollapsed #dashToggle{ right:0; border-radius:4px; border-right:1px solid var(--line-strong); }
+  .dash-section{ border-bottom:1px solid var(--line); padding:14px 16px; }
+  .dash-title{ font-family:var(--font-mono); font-size:10px; letter-spacing:0.12em; color:var(--text-faint); text-transform:uppercase; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+  .row{ display:flex; justify-content:space-between; align-items:center; font-size:12px; padding:4px 0; color:var(--text-dim); }
+  .row .v{ font-family:var(--font-mono); color:var(--text); font-size:11.5px; }
+  .row .v.ok{ color:var(--ok); } .row .v.warn{ color:var(--warn); } .row .v.danger{ color:#ff8f87; }
+  .pill{ font-family:var(--font-mono); font-size:9.5px; padding:2px 7px; border-radius:20px; border:1px solid currentColor; }
+
+  .stat-grid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px; }
+  .stat{ border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px; background:rgba(255,255,255,0.015); }
+  .stat .n{ font-family:var(--font-mono); font-size:17px; color:var(--accent-2); line-height:1.1; }
+  .stat .l{ font-size:9.5px; color:var(--text-faint); margin-top:3px; letter-spacing:0.02em; }
+
+  .field{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:8px; }
+  .field label{ font-size:11px; color:var(--text-dim); }
+  .field input{
+    width:64px; background:rgba(255,255,255,0.04); border:1px solid var(--line-strong); color:var(--text);
+    font-family:var(--font-mono); font-size:11px; padding:4px 6px; border-radius:var(--radius); text-align:right;
+  }
+  .field input:focus{ outline:none; border-color:var(--accent); }
+
+  .loc-chip{
+    display:flex; align-items:center; gap:8px; padding:7px 8px; border:1px solid var(--line);
+    border-radius:var(--radius); margin-top:6px; cursor:pointer; transition:border-color .15s, background .15s;
+  }
+  .loc-chip:hover{ border-color:var(--accent); background:var(--accent-soft); }
+  .loc-chip.sel{ border-color:var(--accent); background:var(--accent-soft); }
+  .loc-chip .u{ width:8px; height:8px; border-radius:50%; flex:none; box-shadow:0 0 5px currentColor; }
+  .loc-chip .t{ flex:1; min-width:0; }
+  .loc-chip .t b{ display:block; font-size:11.5px; font-weight:500; }
+  .loc-chip .t span{ display:block; font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); }
+  .loc-chip .arrow{ font-family:var(--font-mono); font-size:11px; color:var(--text-faint); }
+
+  .op-row{ display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed var(--line); font-size:11px; }
+  .op-row:last-child{ border-bottom:none; }
+  .op-row .status{ font-family:var(--font-mono); font-size:9.5px; padding:2px 6px; border-radius:3px; }
+  .op-row .status.transit{ background:var(--accent-soft); color:var(--accent-2); }
+  .op-row .status.done{ background:var(--ok-soft); color:var(--ok); }
+
+  #logList{ display:flex; flex-direction:column-reverse; gap:5px; max-height:180px; overflow-y:auto; }
+  .log-item{ font-size:10.5px; color:var(--text-dim); border-left:2px solid var(--line-strong); padding:2px 0 2px 8px; }
+  .log-item .ts{ font-family:var(--font-mono); color:var(--text-faint); margin-right:6px; font-size:9.5px; }
+  .empty-note{ font-size:11px; color:var(--text-faint); font-style:italic; padding:4px 0; }
+
+  /* ---------- Selection detail panel ---------- */
+  #detailPanel{
+    position:absolute; left:16px; bottom:16px; width:380px; max-height:66vh;
+    background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--radius);
+    z-index:35; display:none; flex-direction:column; overflow:hidden; backdrop-filter: blur(6px);
+    box-shadow:0 12px 40px rgba(0,0,0,0.45);
+  }
+  #detailPanel.show{ display:flex; }
+  #detailHead{ display:flex; justify-content:space-between; align-items:flex-start; padding:14px 14px 10px; border-bottom:1px solid var(--line); }
+  #detailHead .eyebrow{ font-family:var(--font-mono); font-size:9.5px; color:var(--accent-2); letter-spacing:0.1em; }
+  #detailHead h2{ font-family:var(--font-display); font-size:16px; margin:3px 0 0; font-weight:600; }
+  #detailClose{ background:none; border:none; color:var(--text-faint); font-size:18px; cursor:pointer; line-height:1; padding:2px 4px; }
+  #detailClose:hover{ color:var(--text); }
+  #detailBody{ padding:12px 14px 14px; overflow-y:auto; }
+  .kv{ display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed var(--line); font-size:12px; gap:10px; }
+  .kv b{ color:var(--text-dim); font-weight:400; }
+  .kv span{ font-family:var(--font-mono); font-size:11.5px; text-align:right; }
+  .desc{ font-size:12px; color:var(--text-dim); line-height:1.55; margin-top:10px; }
+  .badge{ display:inline-block; font-family:var(--font-mono); font-size:9.5px; padding:2px 8px; border-radius:20px; border:1px solid currentColor; margin-top:2px;}
+
+  .need-grid{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .need-opt{ display:flex; align-items:center; gap:9px; font-size:12px; padding:6px 8px; border:1px solid var(--line); border-radius:var(--radius); cursor:pointer; }
+  .need-opt:hover{ border-color:var(--line-strong); }
+  .need-opt input{ accent-color:var(--accent); width:14px; height:14px; }
+  .swatch{ display:inline-block; width:10px; height:10px; border-radius:2px; flex:none; box-shadow:0 0 5px currentColor; }
+  .need-opt.suggested{ border-color:rgba(224,164,88,0.5); }
+
+  .engbox{ margin-top:12px; border:1px solid var(--line); border-radius:var(--radius); padding:10px; background:rgba(255,255,255,0.015); }
+  .engbox .t{ font-family:var(--font-mono); font-size:9.5px; color:var(--text-faint); letter-spacing:0.08em; margin-bottom:6px; }
+
+  #sendBtn{ width:100%; margin-top:14px; padding:11px; font-family:var(--font-mono); font-weight:600; font-size:11.5px;
+    letter-spacing:0.06em; border-radius:var(--radius); border:1px solid var(--accent); background:var(--accent-soft);
+    color:var(--accent-2); cursor:pointer; }
+  #sendBtn:hover:not(:disabled){ background:rgba(79,179,169,0.3); }
+  #sendBtn:disabled{ opacity:0.3; cursor:not-allowed; }
+  #feasNote{ font-size:10.5px; margin-top:8px; padding:7px 8px; border-radius:var(--radius); display:none; }
+  #feasNote.bad{ display:block; background:var(--danger-soft); color:#ff9a92; border:1px solid rgba(192,69,61,0.4); }
+
+  /* ---------- Minimap ---------- */
+  #minimapWrap{
+    position:absolute; left:16px; top:74px; width:196px; z-index:25;
+    background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:8px; backdrop-filter: blur(6px);
+  }
+  #minimapWrap .t{ font-family:var(--font-mono); font-size:9px; letter-spacing:0.1em; color:var(--text-faint); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; }
+  #minimapWrap .t .mmActions{ display:flex; align-items:center; gap:8px; }
+  #mmToggle{ cursor:pointer; color:var(--text-dim); font-size:11px; user-select:none; }
+  #mmToggle:hover{ color:var(--accent-2); }
+  #minimapWrap.collapsed #minimap{ display:none; }
+  #minimapWrap.collapsed{ padding-bottom:8px; }
+  #minimap{ display:block; width:100%; height:auto; border:1px solid var(--line); border-radius:2px; }
+
+  /* ---------- HUD labels ---------- */
+  .hud-label{
+    position:absolute; transform:translate(-50%,-100%); pointer-events:none; z-index:20;
+    font-family:var(--font-mono); font-size:9.5px; color:var(--accent-2); white-space:nowrap;
+    background:rgba(8,12,18,0.72); border:1px solid rgba(79,179,169,0.4); padding:2px 6px; border-radius:2px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .hud-label .d{ width:5px; height:5px; border-radius:50%; box-shadow:0 0 4px currentColor; }
+  .hud-label:before{
+    content:''; position:absolute; left:50%; top:100%; width:1px; height:14px; background:rgba(79,179,169,0.5);
+    transform:translateX(-50%);
+  }
+  .hud-label.hover{ border-color:var(--warn); color:var(--warn); }
+
+  /* ---------- Toasts ---------- */
+  #toasts{ position:absolute; top:70px; right:344px; z-index:80; display:flex; flex-direction:column; gap:8px; width:300px; pointer-events:none; }
+  .toast{
+    background:rgba(10,15,22,0.94); border:1px solid var(--line-strong); border-left:3px solid var(--accent);
+    padding:10px 12px; border-radius:var(--radius); font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    animation:slidein .25s ease-out;
+  }
+  .toast.warn{ border-left-color:var(--warn); }
+  .toast.danger{ border-left-color:var(--danger); }
+  .toast.ok{ border-left-color:var(--ok); }
+  .toast b{ display:block; font-family:var(--font-mono); font-size:9.5px; letter-spacing:0.06em; color:var(--text-faint); margin-bottom:3px; }
+  @keyframes slidein{ from{ opacity:0; transform:translateX(14px);} to{opacity:1; transform:translateX(0);} }
+
+  /* ---------- Safety modal ---------- */
+  #safetyOverlay{ position:absolute; inset:0; background:rgba(4,7,11,0.72); z-index:90; display:none; align-items:center; justify-content:center; backdrop-filter: blur(3px); }
+  #safetyOverlay.show{ display:flex; }
+  #safetyCard{ width:400px; background:var(--panel-solid); border:1px solid var(--line-strong); border-radius:var(--radius); padding:20px; box-shadow:0 20px 60px rgba(0,0,0,0.55); }
+  #safetyCard h3{ font-family:var(--font-display); font-size:15px; margin:0 0 3px; letter-spacing:0.02em; }
+  #safetyCard .sub{ font-family:var(--font-mono); font-size:10px; color:var(--text-faint); margin-bottom:14px; }
+  .check-row{ display:flex; align-items:center; gap:10px; padding:7px 0; font-size:12.5px; color:var(--text-dim); border-bottom:1px dashed var(--line); }
+  .check-row .icon{ width:16px; height:16px; border-radius:50%; border:1px solid var(--line-strong); flex:none; display:flex; align-items:center; justify-content:center; font-size:10px; }
+  .check-row.pending .icon{ color:var(--text-faint); }
+  .check-row.pass .icon{ border-color:var(--ok); color:var(--ok); background:var(--ok-soft); }
+  .check-row.fail .icon{ border-color:var(--danger); color:var(--danger); background:var(--danger-soft); }
+  #safetyResult{ margin-top:14px; padding:11px; border-radius:var(--radius); font-size:12px; display:none; }
+  #safetyResult.pass{ display:block; background:var(--ok-soft); border:1px solid rgba(95,191,119,0.4); color:var(--ok); }
+  #safetyResult.fail{ display:block; background:var(--danger-soft); border:1px solid rgba(192,69,61,0.4); color:#ff9a92; }
+  #safetyClose{ width:100%; margin-top:14px; padding:10px; font-family:var(--font-mono); font-size:11px; border-radius:var(--radius); border:1px solid var(--line-strong); background:rgba(255,255,255,0.03); color:var(--text-dim); cursor:pointer; }
+  #safetyClose:hover{ border-color:var(--accent); color:var(--accent-2); }
+
+  /* ---------- Bottom hint ---------- */
+  #hint{
+    position:absolute; bottom:16px; right:344px; z-index:20; font-family:var(--font-mono); font-size:9.5px;
+    color:var(--text-faint); background:rgba(8,12,18,0.6); border:1px solid var(--line); padding:6px 10px; border-radius:var(--radius);
+  }
+
+  #scaleNote{
+    position:absolute; bottom:16px; left:230px; z-index:20; font-family:var(--font-mono); font-size:9px;
+    color:var(--text-faint); max-width:280px; line-height:1.5; opacity:0.8;
+  }
+
+  @media (max-width: 900px){
+    #dashboard{ width:78vw; }
+    #detailPanel{ width:82vw; }
+    #toasts{ right:16px; }
+    #hint{ display:none; }
+    #scaleNote{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="viewport"></div>
+
+  <div id="minimapWrap" class="collapsed">
+    <div class="t"><span>MINI MAP</span><span class="mmActions"><span id="mmScale">R = 3.0 km</span><span id="mmToggle" title="Minimize/expand mini map">▾</span></span></div>
+    <canvas id="minimap" width="180" height="180"></canvas>
+  </div>
+
+  <div id="scaleNote">DISPLAY NOTE: horizontal layout uses a compressed visual scale for on-screen clarity. Distance, elevation and cable-span readouts in panels reflect true simulated values.</div>
+  <div id="hint">DRAG: orbit · RIGHT-DRAG / SHIFT+DRAG: pan · SCROLL: zoom · CLICK: inspect</div>
+
+  <div id="topbar">
+    <div id="brand">
+      <div class="mark">
+        <svg viewBox="0 0 40 40"><polygon points="20,3 34,34 6,34" fill="none" stroke="#4fb3a9" stroke-width="2.4"/><line x1="20" y1="3" x2="20" y2="18" stroke="#4fb3a9" stroke-width="2.4"/><circle cx="20" cy="20" r="3.4" fill="#4fb3a9"/></svg>
+      </div>
+      <div class="txt"><b>RELAY</b><span>DIGITAL TWIN · TWR-01</span></div>
+    </div>
+    <div id="modeIndicator"><span class="dot" id="modeDot"></span><span class="label" id="modeLabel">NORMAL / PRE-DISASTER</span></div>
+    <div id="controls">
+      <button class="btn danger" id="btnDisaster">START DISASTER SCENARIO</button>
+      <button class="btn primary" id="btnActivate" disabled>ACTIVATE RELAY</button>
+      <button class="btn primary" id="btnSend" disabled>SEND ASSISTANCE</button>
+      <button class="btn danger" id="btnStop" disabled>EMERGENCY STOP</button>
+      <button class="btn ghost" id="btnReset">RESET SIMULATION</button>
+    </div>
+    <button class="btn ghost" id="btnSound" style="flex:none;" title="Toggle siren and alert sounds">🔊 SOUND</button>
+    <div id="clock"><b id="clockTime">00:00:00</b><span id="clockDate">SIM TIME · T+00:00</span></div>
+  </div>
+
+  <div id="dashToggle" title="Minimize/expand dashboard">›</div>
+  <div id="dashboard">
+    <div class="dash-section">
+      <div class="dash-title">System Status</div>
+      <div class="row"><span>Communications</span><span class="v ok" id="stComms">ACTIVE</span></div>
+      <div class="row"><span>Tower Stability</span><span class="v ok" id="stStability">NOMINAL</span></div>
+      <div class="row"><span>Power / Energy</span><span class="v" id="stPower">92%</span></div>
+      <div class="row"><span>Emergency Buffer Stock</span><span class="v" id="stBuffer">3,150 kg</span></div>
+      <div class="row"><span>Wind Condition</span><span class="v" id="stWind">12 km/h</span></div>
+      <div class="row"><span>Monitoring</span><span class="v ok" id="stMonitor">ONLINE</span></div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-title">Operational Parameters</div>
+      <div class="field"><label>Payload / trip (kg)</label><input type="number" id="inPayload" value="50" min="5" max="500" step="5"></div>
+      <div class="field"><label>Cycle time (min)</label><input type="number" id="inCycle" value="30" min="5" max="180" step="5"></div>
+      <div class="field"><label>Availability (%)</label><input type="number" id="inAvail" value="75" min="10" max="100" step="5"></div>
+      <div class="stat-grid">
+        <div class="stat"><div class="n" id="statMaxCap">75</div><div class="l">MAX kg / HOUR</div></div>
+        <div class="stat"><div class="n" id="stat72">5,400</div><div class="l">72-HR CAPACITY (kg)</div></div>
+      </div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-title">Affected Areas <span class="pill" id="pillAreas" style="color:var(--text-faint);">0</span></div>
+      <div id="locList"><div class="empty-note">No disaster scenario active. Run START DISASTER SCENARIO to generate affected communities.</div></div>
+    </div>
+
+    <div class="dash-section">
+      <div class="dash-title">Active Operations</div>
+      <div class="stat-grid">
+        <div class="stat"><div class="n" id="statDelivered">0</div><div class="l">DELIVERED (kg)</div></div>
+        <div class="stat"><div class="n" id="statRemaining">5,400</div><div class="l">REMAINING (kg / 72h)</div></div>
+      </div>
+      <div id="opsList" style="margin-top:8px;"><div class="empty-note">No active deliveries.</div></div>
+    </div>
+
+    <div class="dash-section" style="border-bottom:none;">
+      <div class="dash-title">Activity Log</div>
+      <div id="logList"><div class="empty-note">System idle.</div></div>
+    </div>
+  </div>
+
+  <div id="detailPanel">
+    <div id="detailHead">
+      <div><div class="eyebrow" id="detailEyebrow">COMPONENT</div><h2 id="detailTitle">—</h2></div>
+      <button id="detailClose">&times;</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+
+  <div id="toasts"></div>
+
+  <div id="safetyOverlay">
+    <div id="safetyCard">
+      <h3>Pre-Dispatch Safety Verification</h3>
+      <div class="sub">RELAY-TWR-01 · AUTOMATED SAFETY GATE</div>
+      <div id="checkRows"></div>
+      <div id="safetyResult"></div>
+      <button id="safetyClose" style="display:none;">CLOSE</button>
+    </div>
+  </div>
+</div>
+
+<div id="loadStatus" style="position:fixed;inset:0;background:#0b1119;color:#8a9cb0;display:flex;align-items:center;justify-content:center;font-family:monospace;font-size:13px;z-index:999;letter-spacing:0.04em;">LOADING RELAY DIGITAL TWIN…</div>
+<script>
+(function(){
+  var candidates = [
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.128.0/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r127/three.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r124/three.min.js'
+  ];
+  var i = 0;
+  function tryNext(){
+    if(typeof THREE !== 'undefined'){ onReady(); return; }
+    if(i >= candidates.length){
+      document.getElementById('loadStatus').innerHTML = 'Unable to load the Three.js 3D engine from cdnjs.cloudflare.com.<br><br>Please check that this domain is reachable and reload.';
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = candidates[i++];
+    s.onload = function(){
+      if(typeof THREE !== 'undefined') onReady(); else tryNext();
+    };
+    s.onerror = tryNext;
+    document.head.appendChild(s);
+  }
+  function onReady(){
+    var el = document.getElementById('loadStatus');
+    if(el) el.remove();
+    window.__startRelayApp();
+  }
+  tryNext();
+})();
+</script>
+<script>
+/* =========================================================================
+   RELAY — Resilient Emergency Logistics Access System
+   3D Digital Twin — vanilla Three.js r128, no build step.
+   ========================================================================= */
+window.__startRelayApp = function(){
+"use strict";
+
+/* ---------------------------------------------------------------------
+   0. CONSTANTS & GLOBAL STATE
+   --------------------------------------------------------------------- */
+const TOWER_TOP_Y = 22;          // world units, visual tower height
+const TOWER_TOP_M = 42;          // "real" meters represented by tower top (for engineering calc)
+const METERS_PER_UNIT_TERRAIN = 6; // vertical terrain unit -> meters conversion for elevation calc
+const MAX_CABLE_SPAN_M = 3200;   // engineering limit
+const MAX_GRADE = 0.55;          // max safe elevation/horizontal ratio
+const CARGO_SPEED_MPS = 2.6;     // aerial cargo carrier speed, m/s (real)
+const TERRAIN_HALF = 150;
+
+const SEED_A = Math.random()*1000;
+const SEED_B = Math.random()*1000 + 500;
+
+const DAMAGE_LEVELS = [
+  {key:'minor',    label:'Minor / Ringan',    color:'#5fbf77'},
+  {key:'moderate', label:'Moderate / Sedang',  color:'#e0a458'},
+  {key:'severe',   label:'Severe / Berat',     color:'#e07a3f'},
+  {key:'critical', label:'Critical / Kritis',  color:'#c0453d'}
+];
+const WEATHER_CONDITIONS = ['Cerah / Clear','Berawan / Cloudy','Hujan Ringan / Light Rain','Kabut / Fog'];
+const SUPPLY_STATUS = [
+  {label:'Kritis · <24 jam (Critical)', key:'critical'},
+  {label:'Rendah · 1–2 hari (Low)', key:'low'},
+  {label:'Cukup · 3+ hari (Adequate)', key:'adequate'}
+];
+const SUPPLY_OPTIONS = [
+  {id:'food',      label:'Food Package / Sembako'},
+  {id:'water',     label:'Clean Water'},
+  {id:'medicine',  label:'Medicine'},
+  {id:'medteam',   label:'Medical Team'},
+  {id:'equipment', label:'Emergency Equipment'},
+  {id:'rescue',    label:'Rescue Personnel'},
+  {id:'shelter',   label:'Shelter Material'}
+];
+const CARGO_COLORS = {food:0x8a5a34, water:0x3f7fb0, medicine:0xe9e9e9, medteam:0xd8452f, equipment:0x9aa0a6, rescue:0xd8c48a, shelter:0xb08a5a};
+const NEED_COLORS = CARGO_COLORS; // same palette used for beacon lights, cargo crates and checklist swatches
+function hexColor(n){ return '#'+('000000'+n.toString(16)).slice(-6); }
+const VILLAGE_NAMES = ['Sukamaju','Cempaka Wangi','Tirtamulya','Girirejo','Cintapada','Wonoasri','Sindangjaya','Margamulya','Karangasem Timur','Bantarwaru','Sukaresmi','Cibeureum Hilir','Wanareja','Tanjungsari'];
+let villageNamePool = shuffle(VILLAGE_NAMES.slice());
+
+const state = {
+  mode: 'normal',            // normal | disaster | relay | suspended
+  locations: [],
+  selectedLocationId: null,
+  hoveredTowerObj: null,
+  totalDeliveredKg: 0,
+  simStartTime: performance.now(),
+  emergencyStopped: false,
+  commsAvailable: true,
+  activeAnim: [],
+  logs: [],
+  windSpeed: 12,
+  power: 92,
+  bufferStock: 3150
+};
+
+/* ---------------------------------------------------------------------
+   1. UTILITIES
+   --------------------------------------------------------------------- */
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+function fmt(n, d){ return Number(n).toLocaleString('en-US', {maximumFractionDigits:(d==null?0:d)}); }
+function nextVillageName(){
+  if(villageNamePool.length===0) villageNamePool = shuffle(VILLAGE_NAMES.slice());
+  return 'Desa ' + villageNamePool.pop();
+}
+
+function hashNoise(x,y){
+  let s = Math.sin(x*127.1 + y*311.7)*43758.5453123;
+  return s - Math.floor(s);
+}
+function valueNoise(x,y){
+  const xi=Math.floor(x), yi=Math.floor(y);
+  const xf=x-xi, yf=y-yi;
+  const u=xf*xf*(3-2*xf), v=yf*yf*(3-2*yf);
+  const a=hashNoise(xi,yi), b=hashNoise(xi+1,yi), c=hashNoise(xi,yi+1), d=hashNoise(xi+1,yi+1);
+  return (a*(1-u)*(1-v) + b*u*(1-v) + c*(1-u)*v + d*u*v)*2-1;
+}
+function fbm(x,y){
+  let h=0;
+  h += valueNoise(x*0.010+SEED_A, y*0.010+SEED_A)*13;
+  h += valueNoise(x*0.032+SEED_B, y*0.032+SEED_B)*5.2;
+  h += valueNoise(x*0.09+SEED_A*0.5, y*0.09+SEED_B*0.5)*1.6;
+  return h;
+}
+
+/* River path (world XZ), sampled once */
+const riverCurve = new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-TERRAIN_HALF-20, 0, -46 + valueNoise(1,1)*14),
+  new THREE.Vector3(-70, 0, -18 + valueNoise(2,2)*10),
+  new THREE.Vector3(-14, 0, 6 + valueNoise(3,3)*8),
+  new THREE.Vector3(46, 0, 34 + valueNoise(4,4)*10),
+  new THREE.Vector3(110, 0, 58 + valueNoise(5,5)*12),
+  new THREE.Vector3(TERRAIN_HALF+20, 0, 78 + valueNoise(6,6)*14)
+]);
+const riverSamples = riverCurve.getPoints(90);
+function riverDistance(x,z){
+  let m = Infinity;
+  for(let i=0;i<riverSamples.length;i++){
+    const p = riverSamples[i];
+    const d = Math.hypot(x-p.x, z-p.z);
+    if(d<m) m=d;
+  }
+  return m;
+}
+
+const landslideZones = [
+  {x:-58, z:52, r:24},
+  {x:78, z:-40, r:20}
+];
+const floodZones = [
+  {x:20, z:22, r:26},
+  {x:-30, z:-6, r:18}
+];
+
+function nearZone(x,z,zones,pad){
+  for(const zn of zones){ if(Math.hypot(x-zn.x, z-zn.z) < zn.r + (pad||0)) return true; }
+  return false;
+}
+
+function heightAt(x,z){
+  let h = fbm(x,z);
+  const rd = riverDistance(x,z);
+  const rw = 6.5;
+  if(rd < rw*2.4){
+    const t = clamp(rd/(rw*2.4), 0, 1);
+    h = h*t*t - (1-t*t)*2.4;
+  }
+  for(const zn of landslideZones){
+    const d = Math.hypot(x-zn.x, z-zn.z);
+    if(d < zn.r){
+      const t = 1 - d/zn.r;
+      h += valueNoise(x*0.4+9, z*0.4+9)*3.2*t - t*1.6;
+    }
+  }
+  return h;
+}
+
+/* ---------------------------------------------------------------------
+   2. SCENE / CAMERA / RENDERER / LIGHTS
+   --------------------------------------------------------------------- */
+const viewportEl = document.getElementById('viewport');
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xbcd6ec);
+scene.fog = new THREE.Fog(0xbcd6ec, 180, 560);
+
+const camera = new THREE.PerspectiveCamera(48, viewportEl.clientWidth/viewportEl.clientHeight, 0.5, 1400);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(viewportEl.clientWidth, viewportEl.clientHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if('outputEncoding' in renderer) renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+viewportEl.appendChild(renderer.domElement);
+
+const hemi = new THREE.HemisphereLight(0xbfe0f5, 0x4a4030, 0.72);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d9, 2.15);
+sun.position.set(160, 220, 90);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left = -190; sun.shadow.camera.right = 190;
+sun.shadow.camera.top = 190; sun.shadow.camera.bottom = -190;
+sun.shadow.camera.near = 10; sun.shadow.camera.far = 520;
+sun.shadow.bias = -0.0015;
+scene.add(sun);
+const fill = new THREE.DirectionalLight(0xcfe6ff, 0.35);
+fill.position.set(-120, 90, -120);
+scene.add(fill);
+
+/* ---------------------------------------------------------------------
+   3. CAMERA CONTROLS (custom orbit / pan / zoom, no external addon)
+   --------------------------------------------------------------------- */
+function SimpleOrbitControls(camera, domElement){
+  this.camera = camera;
+  this.domElement = domElement;
+  this.target = new THREE.Vector3(0, 12, 0);
+  this.radius = 128;
+  this.theta = Math.PI*0.28;
+  this.phi = Math.PI*0.34;
+  this.minRadius = 14; this.maxRadius = 360;
+  this.minPhi = 0.16; this.maxPhi = Math.PI/2 - 0.02;
+  this.rotateSpeed = 0.0062;
+  this.panSpeed = 0.045;
+  this.dragging = false; this.panning = false;
+  this.lastX = 0; this.lastY = 0;
+  this._pinchDist = null;
+  const self = this;
+
+  domElement.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+  this.wasDrag = false;
+  this._moveAccum = 0;
+  domElement.addEventListener('pointerdown', function(e){
+    domElement.setPointerCapture(e.pointerId);
+    self.lastX = e.clientX; self.lastY = e.clientY;
+    self._moveAccum = 0;
+    if(e.button === 2 || e.shiftKey) self.panning = true; else self.dragging = true;
+  });
+  window.addEventListener('pointermove', function(e){
+    if(!self.dragging && !self.panning) return;
+    const dx = e.clientX - self.lastX, dy = e.clientY - self.lastY;
+    self.lastX = e.clientX; self.lastY = e.clientY;
+    self._moveAccum += Math.abs(dx)+Math.abs(dy);
+    if(self.dragging){
+      self.theta -= dx*self.rotateSpeed;
+      self.phi -= dy*self.rotateSpeed;
+      self.phi = clamp(self.phi, self.minPhi, self.maxPhi);
+    } else if(self.panning){
+      const panX = -dx * self.panSpeed * (self.radius/120);
+      const panY = dy * self.panSpeed * (self.radius/120);
+      const fwd = new THREE.Vector3(); self.camera.getWorldDirection(fwd);
+      const right = new THREE.Vector3().crossVectors(fwd, self.camera.up).normalize();
+      const up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+      self.target.addScaledVector(right, panX);
+      self.target.addScaledVector(up, panY);
+    }
+    self.update();
+  });
+  window.addEventListener('pointerup', function(){
+    self.wasDrag = self._moveAccum > 5;
+    self.dragging=false; self.panning=false;
+  });
+  domElement.addEventListener('wheel', function(e){
+    e.preventDefault();
+    self.radius *= (1 + Math.sign(e.deltaY)*0.09);
+    self.radius = clamp(self.radius, self.minRadius, self.maxRadius);
+    self.update();
+  }, {passive:false});
+  domElement.addEventListener('touchmove', function(e){
+    if(e.touches.length===2){
+      e.preventDefault();
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx,dy);
+      if(self._pinchDist != null){
+        const delta = self._pinchDist - dist;
+        self.radius = clamp(self.radius*(1+delta*0.0025), self.minRadius, self.maxRadius);
+        self.update();
+      }
+      self._pinchDist = dist;
+    }
+  }, {passive:false});
+  domElement.addEventListener('touchend', function(){ self._pinchDist = null; });
+
+  this.update();
+}
+SimpleOrbitControls.prototype.update = function(){
+  const sinPhi = Math.sin(this.phi);
+  const x = this.target.x + this.radius*sinPhi*Math.sin(this.theta);
+  const y = this.target.y + this.radius*Math.cos(this.phi);
+  const z = this.target.z + this.radius*sinPhi*Math.cos(this.theta);
+  this.camera.position.set(x,y,z);
+  this.camera.lookAt(this.target);
+};
+const controls = new SimpleOrbitControls(camera, renderer.domElement);
+
+window.addEventListener('resize', function(){
+  camera.aspect = viewportEl.clientWidth/viewportEl.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(viewportEl.clientWidth, viewportEl.clientHeight);
+});
+
+/* ---------------------------------------------------------------------
+   4. CANVAS TEXTURE HELPERS (procedural, self-contained)
+   --------------------------------------------------------------------- */
+function makeCanvasTexture(draw, w, h){
+  const c = document.createElement('canvas'); c.width = w||128; c.height = h||128;
+  const ctx = c.getContext('2d');
+  draw(ctx, c.width, c.height);
+  const tex = new THREE.CanvasTexture(c);
+  tex.needsUpdate = true;
+  return tex;
+}
+const solarTex = makeCanvasTexture(function(ctx,w,h){
+  ctx.fillStyle = '#0d2233'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = 'rgba(160,200,220,0.55)'; ctx.lineWidth = 2;
+  for(let i=0;i<=6;i++){ ctx.beginPath(); ctx.moveTo(i*w/6,0); ctx.lineTo(i*w/6,h); ctx.stroke(); }
+  for(let i=0;i<=3;i++){ ctx.beginPath(); ctx.moveTo(0,i*h/3); ctx.lineTo(w,i*h/3); ctx.stroke(); }
+}, 128,64);
+const doorTex = makeCanvasTexture(function(ctx,w,h){
+  ctx.fillStyle = '#7d7368'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle = '#5b544c';
+  for(let y=0;y<h;y+=8){ ctx.fillRect(0,y,w,3); }
+  ctx.fillStyle = '#e0a458'; ctx.fillRect(w*0.06,h*0.08,w*0.2,h*0.16);
+}, 96,96);
+const screenTex = makeCanvasTexture(function(ctx,w,h){
+  ctx.fillStyle = '#04140f'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = '#4fb3a9'; ctx.lineWidth = 2; ctx.strokeRect(4,4,w-8,h-8);
+  ctx.fillStyle = '#4fb3a9'; ctx.font = '10px monospace';
+  ctx.fillText('RELAY-TWR-01', 8, 16);
+  ctx.fillText('SYS OK', 8, 30);
+  ctx.fillText('PWR 92%', 8, 44);
+  ctx.beginPath();
+  for(let i=0;i<w;i+=4){ ctx.lineTo(i, 56 + Math.sin(i*0.4)*5); }
+  ctx.strokeStyle='rgba(79,179,169,0.8)'; ctx.stroke();
+}, 128,72);
+const roofTexRed = makeCanvasTexture(function(ctx,w,h){
+  ctx.fillStyle = '#8a4535'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5;
+  for(let y=0;y<h;y+=6){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+}, 64,64);
+
+/* ---------------------------------------------------------------------
+   5. TERRAIN
+   --------------------------------------------------------------------- */
+function buildTerrain(){
+  const size = TERRAIN_HALF*2 + 20, seg = 148;
+  const geo = new THREE.PlaneGeometry(size, size, seg, seg);
+  geo.rotateX(-Math.PI/2);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count*3);
+  const c = new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x = pos.getX(i), z = pos.getZ(i);
+    const h = heightAt(x,z);
+    pos.setY(i,h);
+    const rd = riverDistance(x,z);
+    let inFlood = nearZone(x,z,floodZones,0) && h < 1.2;
+    let inSlide = nearZone(x,z,landslideZones,0);
+    if(rd < 5.5){ c.set(0x235b86); }
+    else if(inFlood){ c.set(0x2f7099); }
+    else if(inSlide){ c.set(0x6b472c); }
+    else if(h < -1.2){ c.set(0x355f2b); }
+    else if(h < 4.2){ c.set(0x2f6b32); }
+    else if(h < 8.6){ c.set(0x7b542f); }
+    else { c.set(0x91877a); }
+    colors[i*3]=c.r; colors[i*3+1]=c.g; colors[i*3+2]=c.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.88, metalness:0.0});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+
+  // natural river surface ribbon (no tube shape)
+  const riverPts = riverCurve.getSpacedPoints(120);
+  const rPos = [];
+  const rIdx = [];
+  for(let i=0;i<riverPts.length;i++){
+    const p = riverPts[i];
+    const prev = riverPts[Math.max(0,i-1)];
+    const next = riverPts[Math.min(riverPts.length-1,i+1)];
+    const dx = next.x-prev.x;
+    const dz = next.z-prev.z;
+    const len = Math.max(0.001, Math.hypot(dx,dz));
+    const px = -dz/len;
+    const pz = dx/len;
+    const width = 5.5 + Math.sin(i*0.35)*1.2 + Math.cos(i*0.17)*0.7;
+    const lx=p.x+px*width, lz=p.z+pz*width;
+    const rx=p.x-px*width, rz=p.z-pz*width;
+    rPos.push(lx,heightAt(lx,lz)-0.8,lz);
+    rPos.push(rx,heightAt(rx,rz)-0.8,rz);
+    if(i>0){
+      const n=i*2;
+      rIdx.push(n-2,n-1,n,n-1,n+1,n);
+    }
+  }
+  const riverGeo = new THREE.BufferGeometry();
+  riverGeo.setAttribute('position',new THREE.Float32BufferAttribute(rPos,3));
+  riverGeo.setIndex(rIdx);
+  riverGeo.computeVertexNormals();
+  const riverMat = new THREE.MeshStandardMaterial({
+    color:0x176aa0,
+    transparent:true,
+    opacity:0.86,
+    roughness:0.18,
+    metalness:0.12,
+    side:THREE.DoubleSide
+  });
+  const riverMesh = new THREE.Mesh(riverGeo,riverMat);
+  scene.add(riverMesh);
+
+  // natural flood plains with irregular shoreline
+  floodZones.forEach(function(fz){
+    const shape = new THREE.Shape();
+    const points=32;
+    for(let i=0;i<=points;i++){
+      const a=i/points*Math.PI*2;
+      const wobble=1+0.18*Math.sin(a*3+fz.x)+0.1*Math.cos(a*5+fz.z);
+      const x=Math.cos(a)*fz.r*wobble;
+      const y=Math.sin(a)*fz.r*0.65*wobble;
+      if(i===0) shape.moveTo(x,y);
+      else shape.lineTo(x,y);
+    }
+    const geo=new THREE.ShapeGeometry(shape);
+    const m=new THREE.MeshStandardMaterial({
+      color:0x267aa3,
+      transparent:true,
+      opacity:0.42,
+      roughness:0.3,
+      side:THREE.DoubleSide
+    });
+    const disc=new THREE.Mesh(geo,m);
+    disc.rotation.x=-Math.PI/2;
+    disc.position.set(fz.x,heightAt(fz.x,fz.z)+0.1,fz.z);
+    scene.add(disc);
+    addHazard(disc,{title:'Flood Zone',code:'HZ-FLOOD',eyebrow:'HAZARD OVERLAY',kind:'flood',
+      desc:'Natural floodplain expansion following terrain and river overflow.'});
+  });
+  // landslide zone overlays (scattered debris)
+  landslideZones.forEach(function(sz){
+    for(let i=0;i<16;i++){
+      const a = Math.random()*Math.PI*2, r = Math.random()*sz.r*0.85;
+      const rx = sz.x + Math.cos(a)*r, rz = sz.z + Math.sin(a)*r;
+      const ry = heightAt(rx,rz);
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.4+Math.random()*0.7, 0),
+        new THREE.MeshStandardMaterial({color:0x6b5a45, roughness:0.95})
+      );
+      rock.position.set(rx, ry+0.3, rz);
+      rock.rotation.set(Math.random()*6,Math.random()*6,Math.random()*6);
+      rock.castShadow = true; rock.receiveShadow = true;
+      scene.add(rock);
+    }
+    const marker = new THREE.Mesh(new THREE.CircleGeometry(sz.r, 24),
+      new THREE.MeshStandardMaterial({color:0x7a5a3f, transparent:true, opacity:0.0}));
+    marker.rotation.x = -Math.PI/2;
+    marker.position.set(sz.x, heightAt(sz.x,sz.z)+0.3, sz.z);
+    scene.add(marker);
+    addHazard(marker, {title:'Landslide Zone', code:'HZ-SLIDE', eyebrow:'HAZARD OVERLAY', kind:'slide',
+      desc:'Slope failure with debris accumulation. Terrain unstable; ground routes through this area are unsafe for logistics vehicles.'});
+  });
+}
+
+/* Road ribbon builder */
+function buildRoad(curve, width, breakRange){
+  const pts = curve.getSpacedPoints(90);
+  const positions = [], colors = [], indices = [];
+  const colGood = new THREE.Color(0x555f6b), colDamaged = new THREE.Color(0x4a3f38);
+  let vi = 0;
+  let prevValid = false;
+  for(let i=0;i<pts.length;i++){
+    const skip = breakRange && i>=breakRange[0] && i<=breakRange[1];
+    if(skip){ prevValid = false; continue; }
+    const p = pts[i];
+    const next = pts[Math.min(i+1,pts.length-1)];
+    const dir = new THREE.Vector2(next.x-p.x, next.z-p.z).normalize();
+    const perp = new THREE.Vector2(-dir.y, dir.x);
+    const y = heightAt(p.x,p.z)+0.08;
+    const ax = p.x + perp.x*width/2, az = p.z + perp.y*width/2;
+    const bx = p.x - perp.x*width/2, bz = p.z - perp.y*width/2;
+    positions.push(ax,y,az, bx,y,bz);
+    const dmg = breakRange && Math.abs(i-(breakRange[0]+breakRange[1])/2) < 10;
+    const cc = dmg ? colDamaged : colGood;
+    colors.push(cc.r,cc.g,cc.b, cc.r,cc.g,cc.b);
+    if(prevValid){
+      indices.push(vi-2,vi-1,vi, vi-1,vi+1,vi);
+    }
+    vi+=2;
+    prevValid = true;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors,3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({vertexColors:true, roughness:0.92});
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.receiveShadow = true;
+  scene.add(mesh);
+  return pts;
+}
+
+function buildBrokenBridge(pos){
+  const g = new THREE.Group();
+  const deckMat = new THREE.MeshStandardMaterial({color:0x8f8a7f, roughness:0.85});
+  const pierMat = new THREE.MeshStandardMaterial({color:0x5a5a58, roughness:0.9});
+  const p1 = new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.6,3,8), pierMat);
+  p1.position.set(-3.4, heightAt(pos.x-3.4,pos.z)+1.5, pos.z);
+  const p2 = p1.clone(); p2.position.x = 3.4; p2.position.y = heightAt(pos.x+3.4,pos.z)+1.5;
+  const d1 = new THREE.Mesh(new THREE.BoxGeometry(2.6,0.35,2.2), deckMat);
+  d1.position.set(-4.6, heightAt(pos.x-3.4,pos.z)+3.1, pos.z);
+  d1.rotation.z = -0.18;
+  const d2 = new THREE.Mesh(new THREE.BoxGeometry(2.6,0.35,2.2), deckMat);
+  d2.position.set(4.6, heightAt(pos.x+3.4,pos.z)+2.9, pos.z);
+  d2.rotation.z = 0.22;
+  [p1,p2,d1,d2].forEach(function(m){ m.castShadow=true; m.receiveShadow=true; g.add(m); });
+  scene.add(g);
+  addHazard(d1, {title:'Damaged Bridge / Access Gap', code:'HZ-BRIDGE', eyebrow:'HAZARD OVERLAY', kind:'bridge',
+    desc:'Bridge structure compromised by flood scour; deck sections collapsed. Ground route impassable — this is the primary access failure RELAY is pre-positioned to bypass via aerial cable corridor.'});
+}
+
+/* ---------------------------------------------------------------------
+   6. RELAY TOWER
+   --------------------------------------------------------------------- */
+const pickableTower = [];
+function addPickable(list, obj, data){
+  obj.userData.pickable = true;
+  obj.userData.info = data;
+  list.push(obj);
+}
+const hazardList = [];
+function addHazard(obj, data){ addPickable(hazardList, obj, data); }
+
+let weatherCups = null;
+let beaconMeshes = [];
+let towerGroup = null;
+
+
+// Strategic RELAY placement: elevated stable inland site away from flood corridor
+const RELAY_SAFE_SITE = {
+  x: 42,
+  z: -38
+};
+
+function getRelaySafeHeight(){
+  return heightAt(RELAY_SAFE_SITE.x, RELAY_SAFE_SITE.z);
+}
+
+function buildTower(){
+  towerGroup = new THREE.Group();
+  towerGroup.position.set(RELAY_SAFE_SITE.x,0,RELAY_SAFE_SITE.z);
+  const towerY = getRelaySafeHeight();
+  towerGroup.position.y = towerY;
+  scene.add(towerGroup);
+
+  const steelMat = new THREE.MeshStandardMaterial({color:0x7c8a96, metalness:0.75, roughness:0.42});
+  const concreteMat = new THREE.MeshStandardMaterial({color:0x9a9488, roughness:0.9});
+
+  // plinth
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(4.4,5,1.4,20), concreteMat);
+  plinth.position.y = 0.7; plinth.receiveShadow = true; plinth.castShadow = true;
+  towerGroup.add(plinth);
+
+  // 4 lattice legs converging inward
+  const legBaseR = 3.4, legTopR = 0.9, legTopY = TOWER_TOP_Y;
+  const legPositions = [];
+  for(let i=0;i<4;i++){
+    const a = Math.PI/2*i + Math.PI/4;
+    const bx = Math.cos(a)*legBaseR, bz = Math.sin(a)*legBaseR;
+    const tx = Math.cos(a)*legTopR, tz = Math.sin(a)*legTopR;
+    legPositions.push({b:new THREE.Vector3(bx,1.4,bz), t:new THREE.Vector3(tx,legTopY,tz)});
+    const dir = new THREE.Vector3(tx-bx, legTopY-1.4, tz-bz);
+    const len = dir.length();
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.36,len,8), steelMat);
+    leg.position.copy(new THREE.Vector3(bx,1.4,bz).add(dir.clone().multiplyScalar(0.5)));
+    leg.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+    leg.castShadow = true;
+    towerGroup.add(leg);
+  }
+  // cross braces (zig-zag) at 6 levels
+  const levels = 6;
+  for(let lvl=0; lvl<levels; lvl++){
+    const t0 = lvl/levels, t1 = (lvl+1)/levels;
+    const ringPts0 = legPositions.map(function(lp){ return lp.b.clone().lerp(lp.t, t0); });
+    const ringPts1 = legPositions.map(function(lp){ return lp.b.clone().lerp(lp.t, t1); });
+    for(let i=0;i<4;i++){
+      const a = ringPts0[i], b = ringPts1[(i+1)%4];
+      const dir = new THREE.Vector3().subVectors(b,a);
+      const len = dir.length();
+      const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,len,6), steelMat);
+      brace.position.copy(a.clone().add(dir.clone().multiplyScalar(0.5)));
+      brace.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+      towerGroup.add(brace);
+      // horizontal ring
+      const h1 = ringPts0[i], h2 = ringPts0[(i+1)%4];
+      const hdir = new THREE.Vector3().subVectors(h2,h1);
+      const hlen = hdir.length();
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,hlen,6), steelMat);
+      ring.position.copy(h1.clone().add(hdir.clone().multiplyScalar(0.5)));
+      ring.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), hdir.clone().normalize());
+      towerGroup.add(ring);
+    }
+  }
+
+  // MID PLATFORM (~40% height)
+  const midY = legTopY*0.42;
+  const midR = legBaseR + (legTopR-legBaseR)*0.42 + 1.1;
+  const midDeck = new THREE.Mesh(new THREE.CylinderGeometry(midR, midR, 0.35, 4), steelMat);
+  midDeck.rotation.y = Math.PI/4;
+  midDeck.position.y = midY;
+  midDeck.castShadow = true; midDeck.receiveShadow = true;
+  towerGroup.add(midDeck);
+
+  // warehouse (emergency buffer)
+  const warehouse = new THREE.Group();
+  const whBody = new THREE.Mesh(new THREE.BoxGeometry(3.4,2.1,2.6), new THREE.MeshStandardMaterial({color:0xc9c2b4, roughness:0.85}));
+  whBody.position.y = 1.05;
+  const whRoof = new THREE.Mesh(new THREE.BoxGeometry(3.7,0.22,2.9), new THREE.MeshStandardMaterial({color:0x555f6b, roughness:0.6, metalness:0.3}));
+  whRoof.position.y = 2.2;
+  const whDoor = new THREE.Mesh(new THREE.PlaneGeometry(1.4,1.5), new THREE.MeshStandardMaterial({map:doorTex, roughness:0.8}));
+  whDoor.position.set(0, 0.9, 1.31);
+  [whBody,whRoof,whDoor].forEach(function(m){ m.castShadow=true; m.receiveShadow=true; warehouse.add(m); });
+  warehouse.position.set(-2.6, midY+0.2, 0);
+  towerGroup.add(warehouse);
+  addPickable(pickableTower, warehouse, {
+    title:'Emergency Buffer Warehouse', code:'TWR-WH-01', eyebrow:'LOGISTICS SYSTEM',
+    func:'Pre-positioned buffer storage for emergency relief supplies (food, water, medical kits, shelter material) staged for immediate dispatch when conventional access fails.',
+    status: 'STOCKED · ' + state.bufferStock.toLocaleString() + ' kg on hand',
+    statusClass:'ok',
+    tech:'Climate-controlled storage bay, capacity 4,200 kg. Restocked on a quarterly rotation cycle per regional BPBD (disaster mitigation agency) protocol.'
+  });
+
+  // loading platform
+  const loadDeck = new THREE.Mesh(new THREE.BoxGeometry(2.4,0.16,2.0), new THREE.MeshStandardMaterial({color:0x6b7480, metalness:0.5, roughness:0.5}));
+  loadDeck.position.set(1.6, midY+0.28, 1.6);
+  loadDeck.castShadow = true; loadDeck.receiveShadow = true;
+  towerGroup.add(loadDeck);
+  const rail = new THREE.Mesh(new THREE.TorusGeometry(0.02,0.02,4,4), steelMat); // placeholder to keep group non-empty pattern consistent
+  addPickable(pickableTower, loadDeck, {
+    title:'Supply Loading Platform', code:'TWR-PLT-01', eyebrow:'LOGISTICS SYSTEM',
+    func:'Staging deck where relief packages are assembled, weighed and loaded onto the cargo carrier prior to dispatch along the cable corridor.',
+    status:'READY',
+    statusClass:'ok',
+    tech:'Rated to 120 kg static load. Integrated weigh-scale feeds payload data directly to the dispatch control panel.'
+  });
+
+  // battery storage
+  const battery = new THREE.Mesh(new THREE.BoxGeometry(1.0,1.3,0.9), new THREE.MeshStandardMaterial({color:0x3a4048, roughness:0.6}));
+  battery.position.set(-0.4, midY+0.85, -2.1);
+  battery.castShadow = true;
+  towerGroup.add(battery);
+  addPickable(pickableTower, battery, {
+    title:'Battery Storage & Backup Power', code:'TWR-PWR-01', eyebrow:'ENERGY SYSTEM',
+    func:'Lithium-iron-phosphate battery bank storing solar-generated energy; sustains communications, lighting and control systems during extended cloud cover or nighttime.',
+    status: state.power + '% charge',
+    statusClass:'ok',
+    tech:'Bank capacity 14.4 kWh. Autonomy of approximately 96 hours at baseline load without solar input.'
+  });
+
+  // control panel / cabinet
+  const cab = new THREE.Group();
+  const cabBody = new THREE.Mesh(new THREE.BoxGeometry(0.9,1.5,0.5), new THREE.MeshStandardMaterial({color:0x2c333b, roughness:0.6}));
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.62,0.36), new THREE.MeshStandardMaterial({map:screenTex, emissive:0x1a3d36, emissiveMap:screenTex, emissiveIntensity:0.9}));
+  screen.position.set(0,0.35,0.26);
+  cabBody.add(screen);
+  cab.add(cabBody);
+  cab.position.set(1.9, midY+0.95, -1.6);
+  cab.castShadow = true;
+  towerGroup.add(cab);
+  addPickable(pickableTower, cab, {
+    title:'Digital Monitoring & Control Unit', code:'TWR-CTRL-01', eyebrow:'CONTROL SYSTEM',
+    func:'Central operational interface: aggregates tower telemetry (power, comms link status, structural sensors, weather station) and issues dispatch commands to the cable and cargo systems.',
+    status:'ONLINE',
+    statusClass:'ok',
+    tech:'Runs automated pre-dispatch safety verification (weather, wind, cable, structural, payload, comms) before every RELAY delivery cycle.'
+  });
+
+  // TOP PLATFORM (~92% height)
+  const topY = legTopY*0.94;
+  const topDeck = new THREE.Mesh(new THREE.CylinderGeometry(1.5,1.5,0.28,8), steelMat);
+  topDeck.position.y = topY;
+  topDeck.castShadow = true;
+  towerGroup.add(topDeck);
+
+  // antenna
+  const antGroup = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.09,4.4,8), steelMat);
+  mast.position.y = topY + 2.3;
+  antGroup.add(mast);
+  for(let i=0;i<3;i++){
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.1,6), steelMat);
+    arm.position.y = topY + 1.5 + i*0.9;
+    arm.rotation.z = Math.PI/2;
+    arm.rotation.y = i*0.9;
+    antGroup.add(arm);
+  }
+  const dish = new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,0.1,16,1,false), new THREE.MeshStandardMaterial({color:0xe4e6e8, roughness:0.4, metalness:0.3, side:THREE.DoubleSide}));
+  dish.rotation.x = Math.PI/2; dish.rotation.z = 0.5;
+  dish.position.set(0.55, topY+3.1, 0.2);
+  antGroup.add(dish);
+  towerGroup.add(antGroup);
+  addPickable(pickableTower, antGroup, {
+    title:'Radio Antenna & Signal Transmission', code:'TWR-COMM-01', eyebrow:'COMMUNICATION SYSTEM',
+    func:'VHF/UHF radio mast providing two-way communication between RELAY, the district emergency operations center, and field response teams when cellular networks are down.',
+    status:'ACTIVE · LINK OK',
+    statusClass:'ok',
+    tech:'Effective range approx. 25 km line-of-sight. Mesh-relay capable to extend coverage between multiple RELAY towers.'
+  });
+
+  // solar array
+  const solarGroup = new THREE.Group();
+  for(let i=0;i<3;i++){
+    const panel = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.05,0.9), new THREE.MeshStandardMaterial({map:solarTex, roughness:0.35, metalness:0.2}));
+    panel.position.set(-1.6, topY+0.55, -1.3 + i*1.0);
+    panel.rotation.x = -0.35;
+    panel.castShadow = true;
+    solarGroup.add(panel);
+  }
+  towerGroup.add(solarGroup);
+  addPickable(pickableTower, solarGroup, {
+    title:'Solar Panel Array', code:'TWR-PWR-02', eyebrow:'ENERGY SYSTEM',
+    func:'Photovoltaic array charging the battery bank; primary energy source keeping RELAY fully operational independent of grid power.',
+    status:'GENERATING · ' + state.power + '%',
+    statusClass:'ok',
+    tech:'Rated output 1.8 kWp. Panels angled 22° and oriented for optimal regional solar exposure.'
+  });
+
+  // beacon lights
+  [ [0.9,0.9], [-0.9,-0.9] ].forEach(function(o,i){
+    const beaconMast = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.7,6), steelMat);
+    beaconMast.position.set(o[0], topY+0.6, o[1]);
+    towerGroup.add(beaconMast);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.14,10,10), new THREE.MeshStandardMaterial({
+      color: i===0?0xff5540:0xffb020, emissive: i===0?0xff5540:0xffb020, emissiveIntensity:1.2
+    }));
+    bulb.position.set(o[0], topY+1.0, o[1]);
+    towerGroup.add(bulb);
+    beaconMeshes.push({mesh:bulb, phase:i*Math.PI, isTowerBeacon:true});
+  });
+
+  // siren / speaker horns
+  const sirenGroup = new THREE.Group();
+  for(let i=0;i<2;i++){
+    const horn = new THREE.Mesh(new THREE.ConeGeometry(0.22,0.5,10,1,true), new THREE.MeshStandardMaterial({color:0xd8d8d8, side:THREE.DoubleSide, roughness:0.5}));
+    horn.rotation.x = Math.PI/2.4;
+    horn.rotation.y = i*Math.PI;
+    horn.position.set(0, topY+0.2, i===0?1.5:-1.5);
+    sirenGroup.add(horn);
+  }
+  towerGroup.add(sirenGroup);
+  addPickable(pickableTower, sirenGroup, {
+    title:'Early Warning Siren & Speaker', code:'TWR-EWS-01', eyebrow:'EARLY WARNING SYSTEM',
+    func:'High-decibel siren and public-address speaker for community-wide disaster alerts, evacuation orders and status broadcasts.',
+    status:'STANDBY · TESTED',
+    statusClass:'ok',
+    tech:'Audible range approx. 1.2 km in open terrain. Triggered manually from the control unit or automatically on sensor threshold.'
+  });
+
+  // weather station (rotating cup anemometer)
+  const wsGroup = new THREE.Group();
+  const wsMast = new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,1.0,6), steelMat);
+  wsMast.position.y = topY+3.9;
+  towerGroup.add(wsMast);
+  weatherCups = new THREE.Group();
+  for(let i=0;i<3;i++){
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.35,4), steelMat);
+    const a = i*(Math.PI*2/3);
+    arm.position.set(Math.cos(a)*0.17,0,Math.sin(a)*0.17);
+    arm.rotation.z = Math.PI/2; arm.rotation.y = -a;
+    const cup = new THREE.Mesh(new THREE.SphereGeometry(0.06,8,8), new THREE.MeshStandardMaterial({color:0xdddddd}));
+    cup.position.set(Math.cos(a)*0.34,0,Math.sin(a)*0.34);
+    weatherCups.add(arm); weatherCups.add(cup);
+  }
+  weatherCups.position.y = topY+4.4;
+  towerGroup.add(weatherCups);
+  addPickable(pickableTower, wsMast, {
+    title:'Weather Monitoring Station', code:'TWR-WX-01', eyebrow:'CONTROL SYSTEM',
+    func:'Anemometer and environmental sensors feeding live wind speed, precipitation and visibility data into the pre-dispatch safety verification system.',
+    status:'ONLINE',
+    statusClass:'ok',
+    tech:'Wind readings sampled continuously; dispatch is automatically gated when sustained wind exceeds safe cable-operation thresholds.'
+  });
+
+  // cable anchor + pulley mechanism (dispatch origin point)
+  const anchorGroup = new THREE.Group();
+  const anchorBlock = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.5,0.7), new THREE.MeshStandardMaterial({color:0x4a4f57, metalness:0.7, roughness:0.4}));
+  anchorBlock.position.set(0, topY+0.15, 1.3);
+  const pulley = new THREE.Mesh(new THREE.TorusGeometry(0.22,0.06,8,16), new THREE.MeshStandardMaterial({color:0xb8b8b8, metalness:0.8, roughness:0.3}));
+  pulley.position.set(0, topY+0.55, 1.3);
+  pulley.rotation.y = Math.PI/2;
+  anchorGroup.add(anchorBlock); anchorGroup.add(pulley);
+  towerGroup.add(anchorGroup);
+  addPickable(pickableTower, anchorGroup, {
+    title:'Cable Anchor & Cargo Carrier System', code:'TWR-CBL-01', eyebrow:'LOGISTICS SYSTEM',
+    func:'Primary anchor point for the suspended cable corridor. Deploys the cargo carrier to affected communities once a delivery is confirmed in Emergency Logistics Mode.',
+    status: state.mode==='relay' ? 'DEPLOYED' : 'STOWED',
+    statusClass: state.mode==='relay' ? 'warn' : 'ok',
+    tech:'Static cable rated 1,200 kg breaking strength (5x safety factor over max payload). Auto-tensioning winch maintains safe sag under load.'
+  });
+
+  towerGroup.userData.topY = topY;
+}
+
+/* ---------------------------------------------------------------------
+   7. AFFECTED LOCATIONS
+   --------------------------------------------------------------------- */
+const pickableLocations = [];
+const locationGroups = {};
+
+function tooCloseToOthers(x,z, placed){
+  for(const p of placed){ if(Math.hypot(x-p.x,z-p.z) < 24) return true; }
+  return false;
+}
+
+function pickNeeds(damageKey){
+  const pool = {
+    minor: ['food','water','shelter'],
+    moderate: ['food','water','shelter','equipment'],
+    severe: ['medicine','medteam','water','equipment'],
+    critical: ['rescue','medteam','medicine','equipment']
+  }[damageKey];
+  const count = 1 + Math.floor(Math.random()*Math.min(3,pool.length));
+  return shuffle(pool.slice()).slice(0,count);
+}
+
+
+function generateLocations(){
+  const count = 12;
+  const placed = [];
+  const locs = [];
+
+  // evenly distributed around RELAY tower: 360-degree coverage
+  const sectors = [
+    0,30,60,95,125,160,195,225,255,290,320,350
+  ];
+
+  for(let i=0;i<count;i++){
+
+    let x,z,tries=0;
+    const baseAngle = THREE.MathUtils.degToRad(sectors[i]);
+    const distKm = 0.65 + Math.random()*2.15;
+    const radius = 35 + (distKm/3)*95;
+
+    do{
+      const angle = baseAngle + (Math.random()-0.5)*0.28;
+      x = RELAY_SAFE_SITE.x + Math.cos(angle)*radius;
+      z = RELAY_SAFE_SITE.z + Math.sin(angle)*radius;
+      tries++;
+    }while(
+      tries<40 &&
+      (
+        riverDistance(x,z)<16 ||
+        tooCloseToOthers(x,z,placed) ||
+        Math.abs(x)>TERRAIN_HALF-20 ||
+        Math.abs(z)>TERRAIN_HALF-20
+      )
+    );
+
+    placed.push({x,z});
+
+    const y = heightAt(x,z);
+    const damage = pick(DAMAGE_LEVELS);
+    const supply = damage.key==='critical' ? SUPPLY_STATUS[0]
+                  : damage.key==='severe' ? pick(SUPPLY_STATUS.slice(0,2))
+                  : pick(SUPPLY_STATUS);
+
+    const needs = pickNeeds(damage.key);
+
+    locs.push({
+      id:'LOC-'+String(i+1).padStart(2,'0'),
+      name:nextVillageName(),
+      x,y,z,
+      distKm,
+      damage,
+      supply,
+      population:80+Math.floor(Math.random()*1720),
+      weather:pick(WEATHER_CONDITIONS),
+      needs,
+      selectedNeeds:needs.slice(),
+      urgency:damage.key,
+      hasActiveCorridor:false,
+      deliveredKg:0
+    });
+  }
+
+  return locs;
+}
+
+function buildVillage(loc){
+  const g = new THREE.Group();
+  g.position.set(loc.x, loc.y, loc.z);
+  const houseCount = 4 + Math.floor(Math.random()*2);
+  for(let i=0;i<houseCount;i++){
+    const a = (i/houseCount)*Math.PI*2 + Math.random()*0.6;
+    const r = 3 + Math.random()*3.5;
+    const hx = Math.cos(a)*r, hz = Math.sin(a)*r;
+    const hy = heightAt(loc.x+hx, loc.z+hz) - loc.y;
+    const house = new THREE.Group();
+    const w = 1.1+Math.random()*0.5, d = 1.0+Math.random()*0.4, hgt=0.85;
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w,hgt,d), new THREE.MeshStandardMaterial({color: pick([0xd9c9a8,0xc9b896,0xdcd0b8]), roughness:0.85}));
+    body.position.y = hgt/2;
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*0.82, 0.62, 4), new THREE.MeshStandardMaterial({map:roofTexRed, roughness:0.85}));
+    roof.rotation.y = Math.PI/4;
+    roof.position.y = hgt+0.28;
+    body.castShadow = true; body.receiveShadow = true; roof.castShadow = true;
+    house.add(body); house.add(roof);
+    house.position.set(hx, hy, hz);
+    house.rotation.y = Math.random()*Math.PI*2;
+    g.add(house);
+  }
+  // damage severity ring
+  const ring = new THREE.Mesh(new THREE.RingGeometry(6.6,7.2,32), new THREE.MeshStandardMaterial({color:new THREE.Color(loc.damage.color), transparent:true, opacity:0.55, side:THREE.DoubleSide}));
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.05;
+  g.add(ring);
+
+  // community marker pole + flag
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,3.2,6), new THREE.MeshStandardMaterial({color:0xaaaaaa, metalness:0.6}));
+  pole.position.y = 1.6;
+  const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.9,0.55), new THREE.MeshStandardMaterial({color:0xffffff, side:THREE.DoubleSide}));
+  flag.position.set(0.46, 2.9, 0);
+  g.add(pole); g.add(flag);
+
+  // need-signal beacon: one colored lamp per reported assistance type, stacked on a mast
+  const lampCount = Math.max(1, loc.needs.length);
+  const poleHeight = 1.3 + lampCount*0.5;
+  const beaconPole = new THREE.Mesh(new THREE.CylinderGeometry(0.035,0.045,poleHeight,6), new THREE.MeshStandardMaterial({color:0x888888}));
+  beaconPole.position.set(-1.4, poleHeight/2, 0);
+  g.add(beaconPole);
+  loc.needs.slice(0,3).forEach(function(needId, idx){
+    const col = NEED_COLORS[needId] || 0xffffff;
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.17,10,10), new THREE.MeshStandardMaterial({color:col, emissive:col, emissiveIntensity:1.3}));
+    lamp.position.set(-1.4, poleHeight - idx*0.5, 0);
+    g.add(lamp);
+    beaconMeshes.push({mesh:lamp, phase: idx*1.3 + Math.random()*0.6});
+  });
+  // RECEIVER MINI TOWER SYSTEM
+  // Each village gets one compact logistics receiver tower with a single top pulley.
+  // Tower height stays well below the main RELAY tower and is fully grounded on terrain.
+  const cableDir = new THREE.Vector2(RELAY_SAFE_SITE.x-loc.x, RELAY_SAFE_SITE.z-loc.z).normalize();
+  const side = new THREE.Vector2(-cableDir.y,cableDir.x);
+
+  const towerHeight = 5.8;
+  const baseHalf = 0.95;
+  const topHalf = 0.26;
+  const steelMat = new THREE.MeshStandardMaterial({color:0x4b5563, metalness:0.78, roughness:0.34});
+  const darkSteelMat = new THREE.MeshStandardMaterial({color:0x2f3945, metalness:0.82, roughness:0.30});
+  const concreteMat = new THREE.MeshStandardMaterial({color:0x80848b, roughness:0.92});
+
+  function addMember(p0,p1,r0,r1,mat){
+    const dir = new THREE.Vector3().subVectors(p1,p0);
+    const len = dir.length();
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(r1==null?r0:r1, r0, len, 8),
+      mat || steelMat
+    );
+    mesh.position.copy(p0.clone().add(dir.clone().multiplyScalar(0.5)));
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    g.add(mesh);
+    return mesh;
+  }
+
+  const baseCorners = [
+    new THREE.Vector3(-baseHalf, 0, -baseHalf),
+    new THREE.Vector3( baseHalf, 0, -baseHalf),
+    new THREE.Vector3( baseHalf, 0,  baseHalf),
+    new THREE.Vector3(-baseHalf, 0,  baseHalf)
+  ];
+
+  baseCorners.forEach(function(p){
+    p.y = heightAt(loc.x+p.x, loc.z+p.z) - loc.y;
+  });
+
+  const baseRef = Math.max.apply(null, baseCorners.map(function(p){ return p.y; }));
+  const topY = baseRef + towerHeight;
+
+  // four concrete footings, one at each leg
+  baseCorners.forEach(function(p){
+    const footing = new THREE.Mesh(
+      new THREE.BoxGeometry(0.44,0.22,0.44),
+      concreteMat
+    );
+    footing.position.set(p.x, p.y + 0.11, p.z);
+    footing.castShadow = true;
+    footing.receiveShadow = true;
+    g.add(footing);
+  });
+
+  const topCorners = [
+    new THREE.Vector3(-topHalf, topY, -topHalf),
+    new THREE.Vector3( topHalf, topY, -topHalf),
+    new THREE.Vector3( topHalf, topY,  topHalf),
+    new THREE.Vector3(-topHalf, topY,  topHalf)
+  ];
+
+  // main legs
+  for(let i=0;i<4;i++){
+    addMember(baseCorners[i], topCorners[i], 0.11, 0.09, steelMat);
+  }
+
+  // horizontal base ring and top ring
+  for(let i=0;i<4;i++){
+    addMember(baseCorners[i], baseCorners[(i+1)%4], 0.045, 0.045, darkSteelMat);
+    addMember(topCorners[i], topCorners[(i+1)%4], 0.040, 0.040, darkSteelMat);
+  }
+
+  // cross braces on all four faces
+  for(let i=0;i<4;i++){
+    const a = baseCorners[i];
+    const b = baseCorners[(i+1)%4];
+    const ta = topCorners[i];
+    const tb = topCorners[(i+1)%4];
+    addMember(a, tb, 0.03, 0.03, darkSteelMat);
+    addMember(b, ta, 0.03, 0.03, darkSteelMat);
+  }
+
+  // small top cap/platform
+  const cap = new THREE.Mesh(
+    new THREE.BoxGeometry(0.95, 0.12, 0.95),
+    darkSteelMat
+  );
+  cap.position.set(0, topY, 0);
+  cap.castShadow = true;
+  cap.receiveShadow = true;
+  g.add(cap);
+
+  // one pulley point at the top, slightly toward the main tower direction
+  const pulleyPos = new THREE.Vector3(cableDir.x*0.18, topY-0.04, cableDir.y*0.18);
+
+  const pulley = new THREE.Mesh(
+    new THREE.TorusGeometry(0.26, 0.05, 12, 28),
+    new THREE.MeshStandardMaterial({color:0xd1d5db, metalness:0.95, roughness:0.24})
+  );
+  pulley.rotation.y = Math.PI/2;
+  pulley.position.copy(pulleyPos);
+  g.add(pulley);
+
+  const axleStart = new THREE.Vector3(
+    pulleyPos.x + side.x*0.34,
+    pulleyPos.y,
+    pulleyPos.z + side.y*0.34
+  );
+  const axleEnd = new THREE.Vector3(
+    pulleyPos.x - side.x*0.34,
+    pulleyPos.y,
+    pulleyPos.z - side.y*0.34
+  );
+  addMember(axleStart, axleEnd, 0.045, 0.045, darkSteelMat);
+
+  // centered vertical hook for unloading
+  const dropLine = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.016, 0.016, 0.78, 8),
+    new THREE.MeshStandardMaterial({color:0x161616})
+  );
+  dropLine.position.set(pulleyPos.x, pulleyPos.y-0.40, pulleyPos.z);
+  g.add(dropLine);
+
+  const hook = new THREE.Mesh(
+    new THREE.TorusGeometry(0.09, 0.02, 10, 20),
+    new THREE.MeshStandardMaterial({color:0xfbbf24, metalness:0.90, roughness:0.20})
+  );
+  hook.rotation.x = Math.PI/2;
+  hook.position.set(pulleyPos.x, pulleyPos.y-0.83, pulleyPos.z);
+  g.add(hook);
+
+  // exact cable receiver endpoint: top pulley axle center
+  loc.receiveOffset = pulleyPos.clone();
+
+  scene.add(g);
+  g.userData.pickable=true;
+  g.userData.info=loc;
+  pickableLocations.push(g);
+  locationGroups[loc.id] = g;
+  loc.worldPos = new THREE.Vector3(loc.x, loc.y+2.2, loc.z);
+}
+
+function clearLocations(){
+  pickableLocations.forEach(function(g){ scene.remove(g); });
+  pickableLocations.length = 0;
+  Object.keys(locationGroups).forEach(function(k){ delete locationGroups[k]; });
+  beaconMeshes = beaconMeshes.filter(function(b){ return b.isTowerBeacon; });
+  // also clear any lingering cable tubes / carriers from a previous scenario
+  activeCorridors.forEach(function(c){ scene.remove(c.tube); });
+  activeCorridors.length = 0;
+  state.activeAnim.forEach(function(a){ if(a.carrier) scene.remove(a.carrier); });
+  state.activeAnim.length = 0;
+}
+
+/* ---------------------------------------------------------------------
+   8. SUPPLY HUB (adjacent to tower) + INITIAL WORLD BUILD
+   --------------------------------------------------------------------- */
+function buildSupplyHub(){
+  const g = new THREE.Group();
+  // Logistics hub placed beside the tower on safe inland ground
+  const hubX = RELAY_SAFE_SITE.x + 12;
+  const hubZ = RELAY_SAFE_SITE.z - 10;
+  const y = heightAt(hubX,hubZ);
+  g.position.set(hubX, y, hubZ);
+  const mat = new THREE.MeshStandardMaterial({color:0xb7ad9c, roughness:0.85});
+  const roofMat = new THREE.MeshStandardMaterial({color:0x4a5560, roughness:0.6, metalness:0.25});
+  [[0,0,4.2,2.6,3.0],[3.6,0.3,2.6,2.2,2.6]].forEach(function(d){
+    const body = new THREE.Mesh(new THREE.BoxGeometry(d[2],d[4],d[3]), mat);
+    body.position.set(d[0], d[4]/2, d[1]);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(d[2]+0.3,0.18,d[3]+0.3), roofMat);
+    roof.position.set(d[0], d[4]+0.1, d[1]);
+    body.castShadow=true; body.receiveShadow=true; roof.castShadow=true;
+    g.add(body); g.add(roof);
+  });
+  const fence = new THREE.Mesh(new THREE.RingGeometry(6.6,6.8,24), new THREE.MeshStandardMaterial({color:0x8a8a8a, side:THREE.DoubleSide}));
+  fence.rotation.x=-Math.PI/2; fence.position.y=0.05;
+  g.add(fence);
+  scene.add(g);
+  addHazard(g, {title:'Logistics Supply Hub', code:'HUB-01', eyebrow:'GROUND INFRASTRUCTURE',
+    desc:'Regional emergency supply hub co-located with RELAY-TWR-01. Restocks the tower buffer warehouse and serves as the fallback ground-transport staging point when roads are passable.'});
+}
+
+let roadStartPts = [];
+function buildWorld(){
+  buildTerrain();
+  const road1 = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(-TERRAIN_HALF-15, 0, 20),
+    new THREE.Vector3(-40, 0, 8),
+    new THREE.Vector3(-6, 0, 2),
+    new THREE.Vector3(20, 0, -10),
+    new THREE.Vector3(TERRAIN_HALF+15, 0, -35)
+  ]);
+  const pts1 = buildRoad(road1, 2.6, [38,46]);
+  const breakPt = pts1[42];
+  buildBrokenBridge(breakPt);
+
+  const road2 = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(6,0,4),
+    new THREE.Vector3(30,0,40),
+    new THREE.Vector3(60,0,70),
+    new THREE.Vector3(TERRAIN_HALF+10,0,95)
+  ]);
+  buildRoad(road2, 2.2, null);
+
+  buildSupplyHub();
+  buildTower();
+}
+buildWorld();
+
+/* ---------------------------------------------------------------------
+   9. RAYCASTING / POINTER INTERACTION
+   --------------------------------------------------------------------- */
+const raycaster = new THREE.Raycaster();
+const pointerNDC = new THREE.Vector2();
+let hoveredObj = null;
+
+function pickAt(clientX, clientY){
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNDC.x = ((clientX-rect.left)/rect.width)*2-1;
+  pointerNDC.y = -((clientY-rect.top)/rect.height)*2+1;
+  raycaster.setFromCamera(pointerNDC, camera);
+  const targets = pickableTower.concat(pickableLocations, hazardList);
+  const hits = raycaster.intersectObjects(targets, true);
+  if(hits.length===0) return null;
+  let o = hits[0].object;
+  while(o && !(o.userData && o.userData.pickable && o.userData.info)) o = o.parent;
+  return o;
+}
+
+renderer.domElement.addEventListener('click', function(e){
+  if(controls.wasDrag) return;
+  const hit = pickAt(e.clientX, e.clientY);
+  if(!hit) return;
+  const info = hit.userData.info;
+  if(info.id && info.id.indexOf('LOC-')===0){
+    selectLocation(info.id);
+  } else if(info.eyebrow === 'HAZARD OVERLAY' || info.eyebrow === 'GROUND INFRASTRUCTURE'){
+    openHazardPanel(info);
+  } else {
+    openTowerPanel(info);
+  }
+});
+
+let lastMoveTime = 0;
+renderer.domElement.addEventListener('pointermove', function(e){
+  const now = performance.now();
+  if(now - lastMoveTime < 40) return;
+  lastMoveTime = now;
+  if(controls.dragging || controls.panning){ hoveredObj = null; return; }
+  const hit = pickAt(e.clientX, e.clientY);
+  hoveredObj = hit;
+});
+
+/* ---------------------------------------------------------------------
+   10. HUD FLOATING LABELS
+   --------------------------------------------------------------------- */
+const hudLayer = document.getElementById('app');
+const hudLabelEls = {};
+function ensureHudLabel(key){
+  if(hudLabelEls[key]) return hudLabelEls[key];
+  const el = document.createElement('div');
+  el.className = 'hud-label';
+  el.innerHTML = '<span class="d"></span><span class="txt"></span>';
+  hudLayer.appendChild(el);
+  hudLabelEls[key] = el;
+  return el;
+}
+function projectToScreen(worldPos){
+  const v = worldPos.clone().project(camera);
+  if(v.z > 1) return null;
+  const rect = viewportEl.getBoundingClientRect();
+  return { x: (v.x*0.5+0.5)*rect.width + rect.left, y: (-v.y*0.5+0.5)*rect.height + rect.top, behind:false };
+}
+function updateHudLabels(){
+  const activeKeys = {};
+  if(state.mode==='disaster' || state.mode==='relay' || state.mode==='suspended'){
+    state.locations.forEach(function(loc){
+      const key = 'loc-'+loc.id;
+      const p = projectToScreen(loc.worldPos);
+      activeKeys[key]=true;
+      const el = ensureHudLabel(key);
+      if(!p){ el.style.display='none'; return; }
+      el.style.display='flex';
+      el.style.left = p.x+'px'; el.style.top = p.y+'px';
+      el.querySelector('.d').style.background = loc.damage.color;
+      el.querySelector('.d').style.color = loc.damage.color;
+      el.querySelector('.txt').textContent = loc.id + ' · ' + loc.name.replace('Desa ','');
+      el.classList.toggle('hover', state.selectedLocationId===loc.id);
+    });
+  }
+  if(hoveredObj && hoveredObj.userData.info && !(hoveredObj.userData.info.id && hoveredObj.userData.info.id.indexOf('LOC-')===0)){
+    const info = hoveredObj.userData.info;
+    const key = 'hover-tower';
+    activeKeys[key]=true;
+    const worldP = new THREE.Vector3();
+    hoveredObj.getWorldPosition(worldP);
+    worldP.y += 1.2;
+    const p = projectToScreen(worldP);
+    const el = ensureHudLabel(key);
+    if(p){
+      el.style.display='flex';
+      el.style.left = p.x+'px'; el.style.top = p.y+'px';
+      el.classList.add('hover');
+      el.querySelector('.d').style.background = '#e0a458';
+      el.querySelector('.txt').textContent = info.code + ' · ' + info.title;
+    } else { el.style.display='none'; }
+  }
+  Object.keys(hudLabelEls).forEach(function(key){
+    if(!activeKeys[key]){ hudLabelEls[key].style.display='none'; }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   11. INFO PANELS
+   --------------------------------------------------------------------- */
+const detailPanel = document.getElementById('detailPanel');
+const detailBody = document.getElementById('detailBody');
+const detailTitle = document.getElementById('detailTitle');
+const detailEyebrow = document.getElementById('detailEyebrow');
+document.getElementById('detailClose').addEventListener('click', function(){
+  detailPanel.classList.remove('show');
+  state.selectedLocationId = null;
+  refreshLocList();
+});
+
+function openTowerPanel(info){
+  detailEyebrow.textContent = info.eyebrow + ' · ' + info.code;
+  detailTitle.textContent = info.title;
+  detailBody.innerHTML =
+    '<div class="kv"><b>Function</b></div><div class="desc">'+info.func+'</div>' +
+    '<div class="kv" style="margin-top:10px;"><b>Current Status</b><span class="badge" style="color:var(--'+(info.statusClass||'ok')+');border-color:var(--'+(info.statusClass||'ok')+');">'+info.status+'</span></div>' +
+    '<div class="kv"><b>Technical Notes</b></div><div class="desc">'+info.tech+'</div>';
+  detailPanel.classList.add('show');
+}
+function openHazardPanel(info){
+  detailEyebrow.textContent = info.eyebrow + ' · ' + info.code;
+  detailTitle.textContent = info.title;
+  detailBody.innerHTML = '<div class="desc">'+info.desc+'</div>';
+  detailPanel.classList.add('show');
+}
+
+function selectLocation(id){
+  state.selectedLocationId = id;
+  const loc = state.locations.find(function(l){ return l.id===id; });
+  if(!loc) return;
+  renderLocationPanel(loc);
+  refreshLocList();
+  updateSendButtonState();
+  detailPanel.classList.add('show');
+}
+
+function renderLocationPanel(loc){
+  detailEyebrow.textContent = 'AFFECTED COMMUNITY · ' + loc.id;
+  detailTitle.textContent = loc.name;
+  const eng = computeEngineering(loc);
+  let html = '';
+  html += kv('Community Name', loc.name);
+  html += kv('Damage Level', '<span style="color:'+loc.damage.color+'">'+loc.damage.label+'</span>');
+  html += kv('Population', fmt(loc.population) + ' people');
+  html += kv('Distance from Tower', loc.distKm.toFixed(2) + ' km');
+  html += kv('Weather Condition', loc.weather);
+  html += kv('Current Supply', loc.supply.label);
+  html += kv('Urgency Level', '<span style="color:'+loc.damage.color+'">'+loc.damage.label.split(' /')[0].toUpperCase()+'</span>');
+
+  html += '<div class="engbox"><div class="t">CABLE CORRIDOR ENGINEERING</div>';
+  html += kv('Horizontal Distance', fmt(eng.horizontalM)+' m');
+  html += kv('Elevation Difference', (eng.elevDiffM>=0?'-':'+')+fmt(Math.abs(eng.elevDiffM))+' m ('+(eng.elevDiffM>=0?'descending':'ascending')+')');
+  html += kv('Cable Span', fmt(eng.spanM)+' m');
+  html += kv('Est. Travel Time / Trip', eng.travelMin.toFixed(1)+' min');
+  html += kv('Delivery Feasibility', '<span style="color:'+(eng.feasible?'var(--ok)':'var(--danger)')+'">'+(eng.feasible?'FEASIBLE':'NOT FEASIBLE')+'</span>');
+  html += '</div>';
+
+  if(state.mode==='relay' || state.mode==='suspended'){
+    html += '<div class="t" style="font-family:var(--font-mono);font-size:9.5px;color:var(--text-faint);letter-spacing:0.08em;margin:14px 0 6px;">REQUIRED ASSISTANCE</div>';
+    html += '<div style="font-size:10.5px;color:var(--text-faint);margin-bottom:6px;">Signal lights at this site (3D view) use these same colors to show what was reported.</div>';
+    html += '<div class="need-grid">';
+    SUPPLY_OPTIONS.forEach(function(opt){
+      const checked = loc.selectedNeeds.indexOf(opt.id)!==-1;
+      const suggested = loc.needs.indexOf(opt.id)!==-1;
+      html += '<label class="need-opt'+(suggested?' suggested':'')+'"><input type="checkbox" data-need="'+opt.id+'" '+(checked?'checked':'')+'><span class="swatch" style="background:'+hexColor(NEED_COLORS[opt.id]||0xffffff)+';color:'+hexColor(NEED_COLORS[opt.id]||0xffffff)+'"></span> '+opt.label+(suggested?' <span style="color:var(--warn);font-size:9.5px;margin-left:auto;">reported</span>':'')+'</label>';
+    });
+    html += '</div>';
+    html += '<div id="feasNote" class="'+(eng.feasible?'':'bad')+'">'+(eng.feasible?'':'Cable span or elevation grade exceeds safe engineering limits for a direct corridor. Consider a relay stop, airdrop, or manual portage for final delivery.')+'</div>';
+    html += '<button id="sendBtn">SEND EMERGENCY ASSISTANCE</button>';
+  }
+
+  detailBody.innerHTML = html;
+
+  if(state.mode==='relay' || state.mode==='suspended'){
+    detailBody.querySelectorAll('input[data-need]').forEach(function(cb){
+      cb.addEventListener('change', function(){
+        const id = cb.getAttribute('data-need');
+        const idx = loc.selectedNeeds.indexOf(id);
+        if(cb.checked && idx===-1) loc.selectedNeeds.push(id);
+        if(!cb.checked && idx!==-1) loc.selectedNeeds.splice(idx,1);
+      });
+    });
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = state.emergencyStopped;
+    sendBtn.addEventListener('click', function(){ initiateDispatch(loc); });
+  }
+}
+function kv(k,v){ return '<div class="kv"><b>'+k+':</b><span>'+v+'</span></div>'; }
+
+function computeEngineering(loc){
+  const horizontalM = loc.distKm*1000;
+  const elevDiffM = TOWER_TOP_M - (loc.y*METERS_PER_UNIT_TERRAIN);
+  const spanM = Math.sqrt(horizontalM*horizontalM + elevDiffM*elevDiffM);
+  const grade = Math.abs(elevDiffM)/Math.max(horizontalM,1);
+  const feasible = spanM <= MAX_CABLE_SPAN_M && grade <= MAX_GRADE;
+  const travelMin = (spanM/CARGO_SPEED_MPS)/60;
+  return {horizontalM, elevDiffM, spanM, feasible, travelMin};
+}
+
+/* ---------------------------------------------------------------------
+   12. DASHBOARD
+   --------------------------------------------------------------------- */
+const modeLabelEl = document.getElementById('modeLabel');
+const modeDotEl = document.getElementById('modeDot');
+const btnDisaster = document.getElementById('btnDisaster');
+const btnActivate = document.getElementById('btnActivate');
+const btnSend = document.getElementById('btnSend');
+const btnStop = document.getElementById('btnStop');
+const btnReset = document.getElementById('btnReset');
+const inPayload = document.getElementById('inPayload');
+const inCycle = document.getElementById('inCycle');
+const inAvail = document.getElementById('inAvail');
+
+function opParams(){
+  return {
+    payload: Math.max(1, parseFloat(inPayload.value)||50),
+    cycleMin: Math.max(1, parseFloat(inCycle.value)||30),
+    avail: clamp(parseFloat(inAvail.value)||75, 1, 100)/100
+  };
+}
+function recomputeCapacity(){
+  const p = opParams();
+  const maxCapKgHr = (p.payload/(p.cycleMin/60)) * p.avail;
+  const cap72 = maxCapKgHr*72;
+  document.getElementById('statMaxCap').textContent = fmt(maxCapKgHr,1);
+  document.getElementById('stat72').textContent = fmt(cap72);
+  document.getElementById('statRemaining').textContent = fmt(Math.max(0, cap72-state.totalDeliveredKg));
+  return {maxCapKgHr, cap72};
+}
+[inPayload,inCycle,inAvail].forEach(function(el){ el.addEventListener('input', recomputeCapacity); });
+
+function setMode(mode){
+  state.mode = mode;
+  const map = {
+    normal:{label:'NORMAL / PRE-DISASTER', color:'#4fb3a9'},
+    disaster:{label:'DISASTER DETECTED', color:'#e0a458'},
+    relay:{label:'RELAY ACTIVE — EMERGENCY LOGISTICS', color:'#5fbf77'},
+    suspended:{label:'OPERATION SUSPENDED — FALLBACK REQUIRED', color:'#c0453d'}
+  };
+  const m = map[mode];
+  modeLabelEl.textContent = m.label;
+  modeDotEl.style.background = m.color;
+  modeDotEl.style.color = m.color;
+  btnDisaster.disabled = (mode!=='normal');
+  btnActivate.disabled = (mode!=='disaster');
+  btnStop.disabled = (mode==='normal');
+  updateSendButtonState();
+}
+
+function updateSendButtonState(){
+  const canSend = (state.mode==='relay' || state.mode==='suspended') && !!state.selectedLocationId && !state.emergencyStopped;
+  btnSend.disabled = !canSend;
+}
+
+function refreshLocList(){
+  const el = document.getElementById('locList');
+  document.getElementById('pillAreas').textContent = state.locations.length;
+  document.getElementById('pillAreas').style.color = state.locations.length? 'var(--accent-2)' : 'var(--text-faint)';
+  if(state.locations.length===0){
+    el.innerHTML = '<div class="empty-note">No disaster scenario active. Run START DISASTER SCENARIO to generate affected communities.</div>';
+    return;
+  }
+  el.innerHTML = state.locations.map(function(loc){
+    return '<div class="loc-chip'+(state.selectedLocationId===loc.id?' sel':'')+'" data-id="'+loc.id+'">'+
+      '<span class="u" style="background:'+loc.damage.color+';color:'+loc.damage.color+'"></span>'+
+      '<span class="t"><b>'+loc.name+'</b><span>'+loc.id+' · '+loc.distKm.toFixed(1)+' km · '+fmt(loc.population)+' people</span></span>'+
+      '<span class="arrow">→</span></div>';
+  }).join('');
+  el.querySelectorAll('.loc-chip').forEach(function(chip){
+    chip.addEventListener('click', function(){ selectLocation(chip.getAttribute('data-id')); });
+  });
+}
+
+function addLog(text){
+  const t = performance.now()-state.simStartTime;
+  const mm = String(Math.floor(t/60000)).padStart(2,'0');
+  const ss = String(Math.floor((t%60000)/1000)).padStart(2,'0');
+  state.logs.unshift({ts:'T+'+mm+':'+ss, text:text});
+  state.logs = state.logs.slice(0,40);
+  const el = document.getElementById('logList');
+  el.innerHTML = state.logs.map(function(l){ return '<div class="log-item"><span class="ts">'+l.ts+'</span>'+l.text+'</div>'; }).reverse().join('');
+}
+
+function toast(title, text, kind){
+  const wrap = document.getElementById('toasts');
+  const el = document.createElement('div');
+  el.className = 'toast'+(kind?(' '+kind):'');
+  el.innerHTML = '<b>'+title+'</b>'+text;
+  wrap.appendChild(el);
+  setTimeout(function(){ el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(function(){ el.remove(); },420); }, 4600);
+}
+
+function refreshOpsList(){
+  const el = document.getElementById('opsList');
+  const active = state.activeAnim;
+  if(active.length===0 && activeCorridors.length===0){
+    el.innerHTML = '<div class="empty-note">No active deliveries.</div>';
+    return;
+  }
+  let rows = '';
+  const shown = {};
+  active.forEach(function(a){
+    if(shown[a.loc.id]) return; shown[a.loc.id]=true;
+    rows += '<div class="op-row"><span>'+a.loc.id+' · '+a.loc.name.replace('Desa ','')+'</span><span class="status transit">'+(a.type==='out'?'IN TRANSIT':'RETURNING')+'</span></div>';
+  });
+  state.locations.forEach(function(loc){
+    if(loc.hasActiveCorridor && !shown[loc.id]){
+      rows += '<div class="op-row"><span>'+loc.id+' · '+loc.name.replace('Desa ','')+'</span><span class="status done">CORRIDOR ESTABLISHED</span></div>';
+    }
+  });
+  el.innerHTML = rows || '<div class="empty-note">No active deliveries.</div>';
+}
+
+/* ---------------------------------------------------------------------
+   13. SAFETY VERIFICATION SEQUENCE
+   --------------------------------------------------------------------- */
+const safetyOverlay = document.getElementById('safetyOverlay');
+const checkRowsEl = document.getElementById('checkRows');
+const safetyResultEl = document.getElementById('safetyResult');
+const safetyCloseEl = document.getElementById('safetyClose');
+
+const SAFETY_ITEMS = [
+  {key:'weather', label:'Weather Condition'},
+  {key:'wind', label:'Wind Condition'},
+  {key:'cable', label:'Cable Status'},
+  {key:'stability', label:'Tower Stability'},
+  {key:'payload', label:'Payload Limit'},
+  {key:'comms', label:'Communication Availability'}
+];
+
+function runSafetyCheck(loc, eng, onDone){
+  checkRowsEl.innerHTML = SAFETY_ITEMS.map(function(it){
+    return '<div class="check-row pending" data-key="'+it.key+'"><span class="icon">…</span><span>'+it.label+'</span></div>';
+  }).join('');
+  safetyResultEl.className=''; safetyResultEl.style.display='none';
+  safetyCloseEl.style.display='none';
+  safetyOverlay.classList.add('show');
+
+  const results = {};
+  results.weather = loc.weather.indexOf('Hujan') === -1 || Math.random()>0.25;
+  results.wind = state.windSpeed < 38;
+  results.cable = eng.feasible;
+  results.stability = Math.random() > 0.04;
+  results.payload = true;
+  results.comms = state.commsAvailable && !state.emergencyStopped;
+
+  let i=0;
+  function step(){
+    if(i>=SAFETY_ITEMS.length){
+      const pass = SAFETY_ITEMS.every(function(it){ return results[it.key]; });
+      setTimeout(function(){
+        if(pass){
+          safetyResultEl.className='pass';
+          safetyResultEl.textContent = 'ALL SYSTEMS GO — cable corridor cleared for dispatch.';
+          playTick();
+        } else {
+          safetyResultEl.className='fail';
+          safetyResultEl.textContent = 'RELAY OPERATION TEMPORARILY SUSPENDED — FALLBACK MODE REQUIRED';
+          playAlarmBeep();
+        }
+        safetyResultEl.style.display='block';
+        safetyCloseEl.style.display='block';
+        safetyCloseEl.onclick = function(){ safetyOverlay.classList.remove('show'); onDone(pass); };
+      }, 200);
+      return;
+    }
+    const it = SAFETY_ITEMS[i];
+    const row = checkRowsEl.querySelector('[data-key="'+it.key+'"]');
+    const ok = results[it.key];
+    row.className = 'check-row '+(ok?'pass':'fail');
+    row.querySelector('.icon').textContent = ok?'✓':'✕';
+    i++;
+    setTimeout(step, 260);
+  }
+  setTimeout(step, 250);
+}
+
+/* ---------------------------------------------------------------------
+   14. CABLE CORRIDOR + CARGO DELIVERY ANIMATION
+   --------------------------------------------------------------------- */
+/* ---------------------------------------------------------------------
+   13b. AUDIO — synthesized siren & alert tones (Web Audio API, no assets)
+   --------------------------------------------------------------------- */
+let audioCtx = null;
+let soundEnabled = true;
+function ensureAudio(){
+  if(!audioCtx){
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if(!AC) return null;
+    audioCtx = new AC();
+  }
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+function playSiren(durationMs){
+  if(!soundEnabled) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.connect(gain); gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.0001, now);
+  gain.gain.exponentialRampToValueAtTime(0.16, now+0.15);
+  const cycles = Math.max(1, Math.round(durationMs/1400));
+  for(let i=0;i<cycles;i++){
+    const t0 = now + i*1.4;
+    osc.frequency.setValueAtTime(480, t0);
+    osc.frequency.linearRampToValueAtTime(860, t0+0.7);
+    osc.frequency.linearRampToValueAtTime(480, t0+1.4);
+  }
+  const tEnd = now + cycles*1.4;
+  gain.gain.setValueAtTime(0.16, tEnd-0.2);
+  gain.gain.exponentialRampToValueAtTime(0.0001, tEnd);
+  osc.start(now); osc.stop(tEnd+0.05);
+}
+function playAlarmBeep(){
+  if(!soundEnabled) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  [0,0.22].forEach(function(offset){
+    const t0 = ctx.currentTime+offset;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type='square'; osc.frequency.value = 720;
+    osc.connect(gain); gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.13, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.18);
+    osc.start(t0); osc.stop(t0+0.2);
+  });
+}
+function playChime(){
+  if(!soundEnabled) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  [523.25, 659.25].forEach(function(f,idx){
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type='sine'; osc.frequency.value=f;
+    osc.connect(gain); gain.connect(ctx.destination);
+    const t0 = now+idx*0.12;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.11, t0+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.35);
+    osc.start(t0); osc.stop(t0+0.4);
+  });
+}
+function playTick(){
+  if(!soundEnabled) return;
+  const ctx = ensureAudio(); if(!ctx) return;
+  const t0 = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type='sine'; osc.frequency.value=880;
+  osc.connect(gain); gain.connect(ctx.destination);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(0.09, t0+0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0+0.14);
+  osc.start(t0); osc.stop(t0+0.16);
+}
+
+const activeCorridors = [];
+
+function getTowerAnchor(){
+  const topY = towerGroup.userData.topY;
+  return new THREE.Vector3(towerGroup.position.x, towerGroup.position.y+topY+0.55, towerGroup.position.z+1.3);
+}
+function getReceivePoint(loc){
+  return new THREE.Vector3(loc.x+loc.receiveOffset.x, loc.y+loc.receiveOffset.y, loc.z+loc.receiveOffset.z);
+}
+
+function createCorridor(loc){
+  const start = getTowerAnchor();
+  const end = getReceivePoint(loc);
+  const mid = start.clone().lerp(end,0.5);
+  // Physics correction: loaded aerial cable must form a catenary-like sag.
+  // The cable highest points are at the anchors; the center drops because of payload weight.
+  const terrainPeak = Math.max(
+    heightAt((start.x+end.x)/2,(start.z+end.z)/2),
+    heightAt(loc.x,loc.z)
+  );
+
+  const safeClearance = Math.max(
+    terrainPeak + 8,
+    end.y + 3
+  );
+
+  const anchorHeight = Math.min(start.y, end.y);
+  mid.y = Math.max(
+    safeClearance,
+    anchorHeight - 8
+  );
+
+  // Additional sag based on cable length and relief payload effect.
+  const span = start.distanceTo(end);
+  mid.y -= Math.min(18, span * 0.045);
+  mid.y = Math.max(mid.y, terrainPeak + 6);
+
+  const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+  const tubeGeo = new THREE.TubeGeometry(curve, 44, 0.13, 6, false);
+  const tubeMat = new THREE.MeshStandardMaterial({color:0x2b3340, metalness:0.85, roughness:0.35});
+  const tube = new THREE.Mesh(tubeGeo, tubeMat);
+  tube.castShadow = true;
+  scene.add(tube);
+  const corridor = {loc, curve, tube};
+  activeCorridors.push(corridor);
+  loc.hasActiveCorridor = true;
+  return corridor;
+}
+
+function createCarrier(needs){
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.85,1.05), new THREE.MeshStandardMaterial({color:0x5b6673, metalness:0.6, roughness:0.4}));
+  body.castShadow = true;
+  group.add(body);
+  const wheelGeo = new THREE.CylinderGeometry(0.3,0.3,0.22,10);
+  const wheelMat = new THREE.MeshStandardMaterial({color:0x222831});
+  const wheel = new THREE.Mesh(wheelGeo, wheelMat);
+  wheel.rotation.z = Math.PI/2; wheel.position.y = 0.5;
+  group.add(wheel);
+  let offsetX = -0.5;
+  (needs.length?needs:['food']).slice(0,3).forEach(function(n){
+    const crate = new THREE.Mesh(new THREE.BoxGeometry(0.38,0.38,0.38), new THREE.MeshStandardMaterial({color: CARGO_COLORS[n]||0x888888}));
+    crate.position.set(offsetX, 0.62, 0);
+    crate.castShadow = true;
+    group.add(crate);
+    offsetX += 0.46;
+  });
+  scene.add(group);
+  return group;
+}
+
+function animMs(spanM){ return clamp(spanM*3.6, 1700, 4600); }
+
+function tripWeightFor(dispatch, cycleNum){
+  return Math.max(0, Math.min(dispatch.payload, dispatch.requiredKg - (cycleNum-1)*dispatch.payload));
+}
+
+function runDeliveryCycle(loc, corridor, cycleNum, totalCycles, tripKg){
+  const carrier = createCarrier(loc.selectedNeeds);
+  const eng = computeEngineering(loc);
+  const duration = animMs(eng.spanM);
+  state.activeAnim.push({type:'out', carrier:carrier, curve:corridor.curve, start:performance.now(), duration:duration, loc:loc, cycleNum:cycleNum, totalCycles:totalCycles, tripKg:tripKg, corridor:corridor});
+  refreshOpsList();
+}
+
+function onCycleDelivered(entry){
+  const loc = entry.loc;
+  state.totalDeliveredKg += entry.tripKg;
+  loc.deliveredKg += entry.tripKg;
+  recomputeCapacity();
+  document.getElementById('statDelivered').textContent = fmt(state.totalDeliveredKg);
+  playTick();
+  toast('DELIVERY CONFIRMED', loc.id+' received '+fmt(entry.tripKg)+' kg (cycle '+entry.cycleNum+'/'+entry.totalCycles+').', 'ok');
+  addLog(loc.id+' delivery cycle '+entry.cycleNum+'/'+entry.totalCycles+' confirmed — '+fmt(entry.tripKg)+' kg delivered.');
+}
+
+function initiateDispatch(loc){
+  if(state.emergencyStopped){ toast('BLOCKED','RELAY is in EMERGENCY STOP. Resume or reset before dispatching.','danger'); return; }
+  if(loc.selectedNeeds.length===0){ toast('SELECT ASSISTANCE','Choose at least one required assistance type before dispatch.','warn'); return; }
+  const eng = computeEngineering(loc);
+  runSafetyCheck(loc, eng, function(pass){
+    if(!pass){
+      setMode('suspended');
+      toast('OPERATION SUSPENDED', loc.id+' dispatch halted by safety gate. Fallback mode required.', 'danger');
+      addLog('SAFETY GATE FAILED for '+loc.id+' — RELAY OPERATION TEMPORARILY SUSPENDED, FALLBACK MODE REQUIRED.');
+      return;
+    }
+    if(state.mode==='suspended') setMode('relay');
+    const p = opParams();
+    const requiredKg = Math.max(p.payload, Math.round(loc.population*1.5));
+    const cyclesNeeded = Math.ceil(requiredKg/p.payload);
+    const cyclesToRun = Math.min(cyclesNeeded, 6);
+    loc.dispatch = {requiredKg:requiredKg, payload:p.payload, cyclesNeeded:cyclesNeeded, cyclesToRun:cyclesToRun};
+    let corridor = activeCorridors.find(function(c){ return c.loc.id===loc.id; });
+    if(!corridor) corridor = createCorridor(loc);
+    addLog('DISPATCH CONFIRMED for '+loc.id+' — '+cyclesToRun+' of '+cyclesNeeded+' cycle(s) scheduled, '+fmt(requiredKg)+' kg estimated requirement.');
+    if(cyclesNeeded>cyclesToRun) addLog(loc.id+': additional '+(cyclesNeeded-cyclesToRun)+' cycle(s) queued for next dispatch window (demo cap reached).');
+    toast('CABLE CORRIDOR ACTIVE', 'Dispatch to '+loc.id+' underway — '+cyclesToRun+' cycle(s) scheduled.', 'ok');
+    runDeliveryCycle(loc, corridor, 1, cyclesNeeded, tripWeightFor(loc.dispatch, 1));
+    refreshLocList();
+  });
+}
+
+function processActiveAnim(now){
+  for(let i=state.activeAnim.length-1;i>=0;i--){
+    const a = state.activeAnim[i];
+    const t = clamp((now-a.start)/a.duration, 0, 1);
+    const ct = a.type==='out' ? t : 1-t;
+    const p = a.curve.getPointAt(ct);
+    a.carrier.position.copy(p);
+    const tangent = a.curve.getTangentAt(ct);
+    a.carrier.quaternion.setFromUnitVectors(new THREE.Vector3(1,0,0), tangent.clone().normalize());
+    if(t>=1){
+      if(a.type==='out'){
+        onCycleDelivered(a);
+        a.type='return';
+        a.start = now;
+        a.duration = a.duration*0.7;
+      } else {
+        scene.remove(a.carrier);
+        state.activeAnim.splice(i,1);
+        const d = a.loc.dispatch;
+        if(d && a.cycleNum < d.cyclesToRun){
+          runDeliveryCycle(a.loc, a.corridor, a.cycleNum+1, d.cyclesNeeded, tripWeightFor(d, a.cycleNum+1));
+        }
+        refreshOpsList();
+      }
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------
+   15. MINIMAP
+   --------------------------------------------------------------------- */
+const mmCanvas = document.getElementById('minimap');
+const mmCtx = mmCanvas.getContext('2d');
+function drawMinimap(){
+  const W = mmCanvas.width, H = mmCanvas.height;
+  mmCtx.clearRect(0,0,W,H);
+  mmCtx.fillStyle = '#0a0f16';
+  mmCtx.fillRect(0,0,W,H);
+  const scale = (W*0.42)/TERRAIN_HALF;
+  const cx = W/2, cy = H/2;
+  function toXY(x,z){ return [cx + x*scale, cy + z*scale]; }
+
+  mmCtx.strokeStyle = 'rgba(120,150,180,0.14)'; mmCtx.lineWidth=1;
+  for(let i=1;i<4;i++){ mmCtx.beginPath(); mmCtx.arc(cx,cy,(W*0.42/3)*i,0,Math.PI*2); mmCtx.stroke(); }
+
+  mmCtx.strokeStyle = 'rgba(63,127,176,0.85)'; mmCtx.lineWidth=2;
+  mmCtx.beginPath();
+  riverSamples.forEach(function(p,i){ const xy=toXY(p.x,p.z); if(i===0) mmCtx.moveTo(xy[0],xy[1]); else mmCtx.lineTo(xy[0],xy[1]); });
+  mmCtx.stroke();
+
+  floodZones.forEach(function(fz){ const xy=toXY(fz.x,fz.z); mmCtx.fillStyle='rgba(63,127,176,0.35)'; mmCtx.beginPath(); mmCtx.arc(xy[0],xy[1],fz.r*scale,0,Math.PI*2); mmCtx.fill(); });
+  landslideZones.forEach(function(sz){ const xy=toXY(sz.x,sz.z); mmCtx.fillStyle='rgba(122,90,63,0.4)'; mmCtx.beginPath(); mmCtx.arc(xy[0],xy[1],sz.r*scale,0,Math.PI*2); mmCtx.fill(); });
+
+  activeCorridors.forEach(function(c){
+    const s = toXY(0,0), e = toXY(c.loc.x, c.loc.z);
+    mmCtx.strokeStyle = 'rgba(79,179,169,0.9)'; mmCtx.lineWidth=1.4;
+    mmCtx.beginPath(); mmCtx.moveTo(s[0],s[1]); mmCtx.lineTo(e[0],e[1]); mmCtx.stroke();
+  });
+
+  state.locations.forEach(function(loc){
+    const xy = toXY(loc.x, loc.z);
+    mmCtx.fillStyle = loc.damage.color;
+    mmCtx.beginPath(); mmCtx.arc(xy[0],xy[1], loc.id===state.selectedLocationId?4.5:3.2, 0, Math.PI*2); mmCtx.fill();
+    if(loc.id===state.selectedLocationId){ mmCtx.strokeStyle='#fff'; mmCtx.lineWidth=1; mmCtx.stroke(); }
+  });
+
+  const t0 = toXY(0,0);
+  mmCtx.fillStyle = '#4fb3a9';
+  mmCtx.beginPath(); mmCtx.moveTo(t0[0],t0[1]-6); mmCtx.lineTo(t0[0]+5,t0[1]+4); mmCtx.lineTo(t0[0]-5,t0[1]+4); mmCtx.closePath(); mmCtx.fill();
+
+  mmCtx.fillStyle = 'rgba(200,215,225,0.55)'; mmCtx.font='9px monospace';
+  mmCtx.fillText('N', W-14, 12);
+}
+
+/* ---------------------------------------------------------------------
+   16. CONTROL BUTTON HANDLERS
+   --------------------------------------------------------------------- */
+btnDisaster.addEventListener('click', function(){
+  clearLocations();
+  state.locations = generateLocations();
+  state.locations.forEach(buildVillage);
+  // Pre-render all logistics cable corridors immediately after disaster mapping.
+  // Corridors are visible before any manual dispatch so the operator can evaluate coverage.
+  state.locations.forEach(function(loc){
+    if(!activeCorridors.find(function(c){ return c.loc.id===loc.id; })){
+      createCorridor(loc);
+    }
+  });
+  setMode('disaster');
+  refreshLocList();
+  refreshOpsList();
+  playSiren(3200);
+  toast('DISASTER SCENARIO ACTIVE', state.locations.length+' affected communities detected within 3 km of RELAY-TWR-01.', 'warn');
+  addLog('Disaster scenario initiated — '+state.locations.length+' affected communities identified, access-failure detected on primary road route.');
+});
+
+btnActivate.addEventListener('click', function(){
+  setMode('relay');
+  playChime();
+  toast('RELAY ACTIVATED', 'Emergency Logistics Mode online. Select an affected community to review requests.', 'ok');
+  addLog('RELAY-TWR-01 switched to Emergency Logistics Mode.');
+  if(state.selectedLocationId){
+    const loc = state.locations.find(function(l){ return l.id===state.selectedLocationId; });
+    if(loc) renderLocationPanel(loc);
+  }
+});
+
+btnSend.addEventListener('click', function(){
+  if(state.selectedLocationId){
+    const loc = state.locations.find(function(l){ return l.id===state.selectedLocationId; });
+    if(loc) initiateDispatch(loc);
+  } else {
+    toast('SELECT A COMMUNITY', 'Choose an affected community from the map or dashboard list first.', 'warn');
+  }
+});
+
+btnStop.addEventListener('click', function(){
+  state.emergencyStopped = true;
+  state.commsAvailable = false;
+  setMode('suspended');
+  state.activeAnim.forEach(function(a){ scene.remove(a.carrier); });
+  state.activeAnim.length = 0;
+  playAlarmBeep();
+  toast('EMERGENCY STOP', 'All active cable operations halted. Communications flagged unavailable.', 'danger');
+  addLog('EMERGENCY STOP triggered — all cargo operations halted immediately.');
+  refreshOpsList();
+  setTimeout(function(){
+    state.commsAvailable = true;
+    toast('COMMS RESTORED', 'Communication link re-established. Resume operations when ready.', 'ok');
+    addLog('Communication link restored following EMERGENCY STOP.');
+  }, 6000);
+});
+
+btnReset.addEventListener('click', function(){
+  clearLocations();
+  state.locations = [];
+  state.selectedLocationId = null;
+  state.totalDeliveredKg = 0;
+  state.emergencyStopped = false;
+  state.commsAvailable = true;
+  state.logs = [];
+  detailPanel.classList.remove('show');
+  setMode('normal');
+  document.getElementById('statDelivered').textContent = '0';
+  recomputeCapacity();
+  refreshLocList();
+  refreshOpsList();
+  document.getElementById('logList').innerHTML = '<div class="empty-note">System idle.</div>';
+  toast('SIMULATION RESET', 'RELAY-TWR-01 returned to Normal / Pre-Disaster mode.', 'ok');
+});
+
+/* ---------------------------------------------------------------------
+   17. CLOCK + PERIODIC TELEMETRY
+   --------------------------------------------------------------------- */
+function tickClock(){
+  const t = performance.now()-state.simStartTime;
+  const totalSec = Math.floor(t/1000);
+  const hh = String(Math.floor(totalSec/3600)).padStart(2,'0');
+  const mm = String(Math.floor((totalSec%3600)/60)).padStart(2,'0');
+  const ss = String(totalSec%60).padStart(2,'0');
+  document.getElementById('clockTime').textContent = hh+':'+mm+':'+ss;
+  document.getElementById('clockDate').textContent = 'SIM TIME · T+'+mm+':'+ss;
+}
+setInterval(function(){
+  state.windSpeed = clamp(state.windSpeed + (Math.random()-0.5)*6, 4, 46);
+  document.getElementById('stWind').textContent = state.windSpeed.toFixed(0)+' km/h';
+  document.getElementById('stWind').className = 'v ' + (state.windSpeed>36?'danger':state.windSpeed>26?'warn':'ok');
+  state.power = clamp(state.power + (Math.random()-0.45)*2, 55, 100);
+  document.getElementById('stPower').textContent = state.power.toFixed(0)+'%';
+  document.getElementById('stComms').textContent = state.commsAvailable && !state.emergencyStopped ? 'ACTIVE' : 'UNAVAILABLE';
+  document.getElementById('stComms').className = 'v ' + (state.commsAvailable && !state.emergencyStopped ? 'ok':'danger');
+  document.getElementById('stStability').textContent = state.mode==='suspended' ? 'CHECK REQUIRED' : 'NOMINAL';
+  document.getElementById('stStability').className = 'v ' + (state.mode==='suspended' ? 'warn':'ok');
+}, 2500);
+setInterval(tickClock, 500);
+
+/* ---------------------------------------------------------------------
+   18. ANIMATE LOOP
+   --------------------------------------------------------------------- */
+function animate(){
+  requestAnimationFrame(animate);
+  const now = performance.now();
+  beaconMeshes.forEach(function(b){
+    const s = 1 + 0.28*Math.sin(now*0.006 + b.phase);
+    b.mesh.scale.setScalar(s);
+    if(b.mesh.material) b.mesh.material.emissiveIntensity = 1.1 + 0.8*Math.sin(now*0.006 + b.phase);
+  });
+  if(weatherCups) weatherCups.rotation.y += 0.04;
+  processActiveAnim(now);
+  updateHudLabels();
+  renderer.render(scene, camera);
+  drawMinimap();
+}
+
+/* ---------------------------------------------------------------------
+   16b. PANEL COLLAPSE / SOUND TOGGLES
+   --------------------------------------------------------------------- */
+const appRootEl = document.getElementById('app');
+const dashToggleEl = document.getElementById('dashToggle');
+dashToggleEl.addEventListener('click', function(){
+  const collapsed = appRootEl.classList.toggle('dashCollapsed');
+  dashToggleEl.textContent = collapsed ? '‹' : '›';
+});
+const minimapWrapEl = document.getElementById('minimapWrap');
+const mmToggleEl = document.getElementById('mmToggle');
+mmToggleEl.addEventListener('click', function(e){
+  e.stopPropagation();
+  const collapsed = minimapWrapEl.classList.toggle('collapsed');
+  mmToggleEl.textContent = collapsed ? '▸' : '▾';
+});
+const btnSoundEl = document.getElementById('btnSound');
+btnSoundEl.addEventListener('click', function(){
+  soundEnabled = !soundEnabled;
+  btnSoundEl.textContent = soundEnabled ? '🔊 SOUND' : '🔇 MUTED';
+  if(soundEnabled){ ensureAudio(); playTick(); }
+});
+
+/* ---------------------------------------------------------------------
+   19. INIT
+   --------------------------------------------------------------------- */
+setMode('normal');
+recomputeCapacity();
+refreshLocList();
+refreshOpsList();
+addLog('RELAY-TWR-01 online — Normal / Pre-Disaster mode. All systems nominal.');
+animate();
+
+};
+</script>
+</body>
+</html>
+

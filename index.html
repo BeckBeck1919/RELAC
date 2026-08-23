@@ -257,6 +257,8 @@
     #scaleNote{ display:none; }
   }
 
+#brandLogo{position:fixed;top:10px;left:12px;width:170px;height:70px;z-index:9999;display:flex;align-items:center;pointer-events:none;}
+#brandLogo img{width:100%;height:auto;object-fit:contain;filter:drop-shadow(0 4px 8px #0008);}
 .relay-logo{
  position:absolute;
  left:18px;
@@ -268,7 +270,7 @@
 }
 </style>
 </head>
-<body><img src="relay-logo.png" style="position:fixed;top:18px;left:18px;width:220px;z-index:9999;filter:drop-shadow(0 4px 10px #0008);">
+<body><div id="brandLogo"><img src="relay-logo.png" alt="RELAY logo"></div>
 <div id="app">
   <div id="viewport"></div>
 
@@ -1914,12 +1916,21 @@ function ensureAudio(){
   return audioCtx;
 }
 let sirenAudio=null;
-function playSiren(durationMs){
+function playSiren(){
   if(!soundEnabled)return;
-  if(!sirenAudio){sirenAudio=new Audio('siren.MP3');sirenAudio.loop=true;}
+  if(!sirenAudio){
+    sirenAudio=new Audio('siren.MP3');
+    sirenAudio.loop=true;
+    sirenAudio.preload='auto';
+  }
   sirenAudio.currentTime=0;
   sirenAudio.play().catch(()=>{});
-  setTimeout(()=>{if(sirenAudio)sirenAudio.pause();},durationMs);
+}
+function stopSiren(){
+  if(sirenAudio){
+    sirenAudio.pause();
+    sirenAudio.currentTime=0;
+  }
 }
 function playAlarmBeep(){
   if(!soundEnabled) return;
@@ -2180,7 +2191,7 @@ btnDisaster.addEventListener('click', function(){
   setMode('disaster');
   refreshLocList();
   refreshOpsList();
-  playSiren(3200);
+  playSiren();
   toast('DISASTER SCENARIO ACTIVE', state.locations.length+' affected communities detected within 3 km of RELAY-TWR-01.', 'warn');
   addLog('Disaster scenario initiated — '+state.locations.length+' affected communities identified, access-failure detected on primary road route.');
 });
@@ -2319,19 +2330,6 @@ animate();
 };
 </script>
 
-<script>
-(function(){
-  function keepEmergencySirenLoop(){
-    const audios = document.querySelectorAll('audio');
-    audios.forEach(function(a){
-      if((a.src||'').toLowerCase().includes('siren')){
-        a.loop = true;
-      }
-    });
-  }
-  document.addEventListener('DOMContentLoaded', keepEmergencySirenLoop);
-})();
-</script>
 
 </body>
 </html>
